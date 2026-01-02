@@ -40,7 +40,7 @@ public class User {
         return id;
     }
     
-    public void setId(UUID id) {
+    protected void setId(UUID id) {
         this.id = id;
     }
     

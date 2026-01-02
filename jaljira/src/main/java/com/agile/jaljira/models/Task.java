@@ -42,7 +42,7 @@ public class Task {
     private String description;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "priority", columnDefinition = "VARCHAR(20)")
+    @Column(name = "priority", columnDefinition = "VARCHAR(10)")
     private Priority priority;
     
     @ManyToOne(fetch = FetchType.LAZY)
@@ -78,7 +78,7 @@ public class Task {
         return id;
     }
     
-    public void setId(UUID id) {
+    protected void setId(UUID id) {
         this.id = id;
     }
     

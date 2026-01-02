@@ -19,8 +19,6 @@ public class Sprint {
     @Column(name = "\"end\"")
     private LocalDateTime end;
     
-    @Column(columnDefinition = "TEXT")
-    private String description;
     
     // Constructors
     public Sprint() {}
@@ -35,7 +33,7 @@ public class Sprint {
         return id;
     }
     
-    public void setId(UUID id) {
+    protected void setId(UUID id) {
         this.id = id;
     }
     
@@ -55,11 +53,4 @@ public class Sprint {
         this.end = end;
     }
     
-    public String getDescription() {
-        return description;
-    }
-    
-    public void setDescription(String description) {
-        this.description = description;
-    }
 }
