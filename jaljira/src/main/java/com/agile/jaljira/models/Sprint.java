@@ -12,23 +12,22 @@ public class Sprint {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
-    @Column(name = "start")
+    //start and end are SQL keywords, so we need to escape them
+    @Column(name = "\"start\"")
     private LocalDateTime start;
     
-    @Column(name = "end")
+    @Column(name = "\"end\"")
     private LocalDateTime end;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "sprint_status")
-    private SprintStatus sprintStatus;
+    @Column(columnDefinition = "TEXT")
+    private String description;
     
     // Constructors
     public Sprint() {}
     
-    public Sprint(LocalDateTime start, LocalDateTime end, SprintStatus sprintStatus) {
+    public Sprint(LocalDateTime start, LocalDateTime end) {
         this.start = start;
         this.end = end;
-        this.sprintStatus = sprintStatus;
     }
     
     // Getters and Setters
@@ -56,11 +55,11 @@ public class Sprint {
         this.end = end;
     }
     
-    public SprintStatus getSprintStatus() {
-        return sprintStatus;
+    public String getDescription() {
+        return description;
     }
     
-    public void setSprintStatus(SprintStatus sprintStatus) {
-        this.sprintStatus = sprintStatus;
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
