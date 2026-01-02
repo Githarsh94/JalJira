@@ -24,6 +24,10 @@ public class User {
     
     private String address;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
+    
     // Constructors
     public User() {}
     
@@ -82,5 +86,13 @@ public class User {
     
     public void setAddress(String address) {
         this.address = address;
+    }
+    
+    public Team getTeam() {
+        return team;
+    }
+    
+    public void setTeam(Team team) {
+        this.team = team;
     }
 }
