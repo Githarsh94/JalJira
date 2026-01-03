@@ -457,7 +457,7 @@ We welcome contributions! Please follow these guidelines:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Project licensing has not yet been finalized. A LICENSE file with the full terms will be added before the first stable release.
 
 ---
 
