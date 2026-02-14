@@ -171,10 +171,17 @@
                     if (!displayedKeys.includes(key)) {
                         const detailRow = document.createElement('div');
                         detailRow.className = 'detail-row';
-                        detailRow.innerHTML = `
-                            <span class="detail-label">${key}:</span>
-                            <span class="detail-value">${JSON.stringify(data[key])}</span>
-                        `;
+                        
+                        const labelSpan = document.createElement('span');
+                        labelSpan.className = 'detail-label';
+                        labelSpan.textContent = key + ':';
+                        
+                        const valueSpan = document.createElement('span');
+                        valueSpan.className = 'detail-value';
+                        valueSpan.textContent = JSON.stringify(data[key]);
+                        
+                        detailRow.appendChild(labelSpan);
+                        detailRow.appendChild(valueSpan);
                         additionalDetails.appendChild(detailRow);
                     }
                 });
