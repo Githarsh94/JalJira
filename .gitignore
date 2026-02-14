@@ -81,6 +81,13 @@ jaljira-frontend/.vite/
 **/.env
 **/.env.local
 
+### Secrets ###
+# Never commit files containing secrets/credentials
+**/application-secrets.yml
+**/application-secrets.properties
+jaljira/src/main/resources/application-secrets.yml
+jaljira/src/test/resources/application-secrets.yml
+
 ### OS ###
 .DS_Store
 .DS_Store?
