@@ -1,0 +1,13 @@
+# Development profile configuration
+# Activate with: --spring.profiles.active=dev or SPRING_PROFILES_ACTIVE=dev
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update       # automatically create/update tables in dev
+    show-sql: true           # show SQL queries in logs for debugging
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # Show SQL parameter values

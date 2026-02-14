@@ -14,15 +14,10 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: ${DB_DRIVER:org.h2.Driver}
 
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
   jpa:
     hibernate:
-      ddl-auto: update       # automatically create/update tables in dev
-    show-sql: true           # optional: shows SQL queries in logs
+      ddl-auto: validate       # safe default: only validate schema, don't modify
+    show-sql: false            # don't log SQL in production (may expose sensitive data)
     properties:
       hibernate:
         format_sql: true
@@ -34,15 +29,15 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID:}
             client-secret: ${GOOGLE_CLIENT_SECRET:}
-            scope: profile, email
-            redirect-uri: "http://localhost:8080/login/oauth2/code/google"
+            scope: openid, profile, email
+            redirect-uri: "{baseUrl}/login/oauth2/code/google"
             authorization-grant-type: authorization_code
 
           github:
             client-id: ${GITHUB_CLIENT_ID:}
             client-secret: ${GITHUB_CLIENT_SECRET:}
             scope: read:user, user:email
-            redirect-uri: "http://localhost:8080/login/oauth2/code/github"
+            redirect-uri: "{baseUrl}/login/oauth2/code/github"
             authorization-grant-type: authorization_code
 
         provider:

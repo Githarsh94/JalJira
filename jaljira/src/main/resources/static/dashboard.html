@@ -112,12 +112,35 @@
     <script>
         fetch('/api/user/info')
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to fetch user info');
+                // Check if we got redirected to login page (status 302 or non-JSON response)
+                const contentType = response.headers.get('content-type');
+                
+                // Handle authentication failures
+                if (response.status === 401 || response.status === 403) {
+                    console.log('User not authenticated, redirecting to login...');
+                    window.location.href = '/';
+                    return;
                 }
+                
+                // Check if response is JSON
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.log('Received non-JSON response, likely redirected to login page');
+                    window.location.href = '/';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch user info: ${response.status} ${response.statusText}`);
+                }
+                
                 return response.json();
             })
             .then(data => {
+                // Check if data exists (might be undefined if redirected)
+                if (!data) {
+                    return;
+                }
+                
                 console.log('User data:', data);
                 
                 // Hide loading, show profile
