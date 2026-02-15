@@ -14,6 +14,10 @@ public class Team {
     @Column(name = "team_name", nullable = false)
     private String teamName;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    private User manager;
+    
     // Constructors
     public Team() {}
     
@@ -36,5 +40,13 @@ public class Team {
     
     public void setTeamName(String teamName) {
         this.teamName = teamName;
+    }
+    
+    public User getManager() {
+        return manager;
+    }
+    
+    public void setManager(User manager) {
+        this.manager = manager;
     }
 }

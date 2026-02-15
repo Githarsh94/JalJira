@@ -24,6 +24,10 @@ public class User {
     
     private String address;
     
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.MEMBER;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     private Team team;
@@ -94,5 +98,13 @@ public class User {
     
     public void setTeam(Team team) {
         this.team = team;
+    }
+    
+    public Role getRole() {
+        return role;
+    }
+    
+    public void setRole(Role role) {
+        this.role = role;
     }
 }
