@@ -14,9 +14,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -49,6 +53,7 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/dashboard", true)
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(oauth2UserService())
+                    .oidcUserService(oidcUserService())
                 )
             )
             .exceptionHandling(exception -> exception
@@ -56,15 +61,17 @@ public class SecurityConfig {
             );
         return http.build();
     }
-    
+    /**
+     * OAuth2UserService for standard OAuth 2.0 providers (e.g., GitHub)
+     */
     @Bean
     public OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService() {
         DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
         
         return request -> {
             try {
-                logger.info("OAuth2 login initiated for provider: {}", 
-                           request.getClientRegistration().getRegistrationId());
+                String registrationId = request.getClientRegistration().getRegistrationId();
+                logger.info("OAuth2 (non-OIDC) login initiated for provider: {}", registrationId);
                 
                 OAuth2User oauth2User = delegate.loadUser(request);
                 logger.debug("OAuth2User loaded successfully with attributes: {}", 
@@ -78,16 +85,63 @@ public class SecurityConfig {
                     new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
                 );
                 
-                logger.info("User authenticated successfully: email={}, role={}", 
-                           user.getEmail(), user.getRole());
+                // Get the correct name attribute key based on the provider
+                String userNameAttributeName = request.getClientRegistration()
+                    .getProviderDetails()
+                    .getUserInfoEndpoint()
+                    .getUserNameAttributeName();
+                
+                logger.info("OAuth2 user authenticated successfully: email={}, role={}, provider={}, nameAttribute={}", 
+                           user.getEmail(), user.getRole(), registrationId, userNameAttributeName);
                 
                 return new DefaultOAuth2User(
                     authorities,
                     oauth2User.getAttributes(),
-                    "email"
+                    userNameAttributeName
                 );
             } catch (Exception e) {
                 logger.error("Error during OAuth2 user processing", e);
+                throw e;
+            }
+        };
+    }
+    
+    /**
+     * OidcUserService for OpenID Connect providers (e.g., Google)
+     */
+    @Bean
+    public OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
+        OidcUserService delegate = new OidcUserService();
+        
+        return oidcUserRequest -> {
+            try {
+                String registrationId = oidcUserRequest.getClientRegistration().getRegistrationId();
+                logger.info("OIDC login initiated for provider: {}", registrationId);
+                
+                OidcUser oidcUser = delegate.loadUser(oidcUserRequest);
+                logger.debug("OidcUser loaded successfully with claims: {}", 
+                            oidcUser.getClaims().keySet());
+                logger.debug("OidcUser attributes: {}", oidcUser.getAttributes().keySet());
+                
+                // Get or create user in database (OidcUser extends OAuth2User)
+                var user = userService.getOrCreateUser(oidcUser);
+                
+                // Add role as Spring Security authority
+                var authorities = Collections.singletonList(
+                    new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+                );
+                
+                logger.info("OIDC user authenticated successfully: email={}, role={}, provider={}", 
+                           user.getEmail(), user.getRole(), registrationId);
+                
+                // For OIDC, we need to preserve the ID token and user info
+                return new DefaultOidcUser(
+                    authorities,
+                    oidcUser.getIdToken(),
+                    oidcUser.getUserInfo()
+                );
+            } catch (Exception e) {
+                logger.error("Error during OIDC user processing", e);
                 throw e;
             }
         };
