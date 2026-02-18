@@ -15,6 +15,23 @@ jaljira-frontend/.nuxt/
 jaljira-frontend/.cache/
 jaljira-frontend/.parcel-cache/
 jaljira-frontend/.vite/
+jaljira-frontend/.pnp
+jaljira-frontend/.pnp.*
+jaljira-frontend/.yarn/*
+!jaljira-frontend/.yarn/patches
+!jaljira-frontend/.yarn/plugins
+!jaljira-frontend/.yarn/releases
+!jaljira-frontend/.yarn/versions
+jaljira-frontend/coverage/
+jaljira-frontend/.pem
+jaljira-frontend/npm-debug.log*
+jaljira-frontend/yarn-debug.log*
+jaljira-frontend/yarn-error.log*
+jaljira-frontend/.pnpm-debug.log*
+jaljira-frontend/.env*
+jaljira-frontend/.vercel/
+jaljira-frontend/*.tsbuildinfo
+jaljira-frontend/next-env.d.ts
 
 ### STS ###
 **/.apt_generated
