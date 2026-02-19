@@ -1,4 +1,7 @@
+"use client";
+
 import { ArrowRight, Play } from "lucide-react";
+import Link from "next/link";
 // import heroImage from "@/assets/hero-dashboard.png";
 
 const Hero = () => {
@@ -20,9 +23,11 @@ const Hero = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-16">
-          <button className="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-base px-8 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-            Get started free <ArrowRight className="w-4 h-4" />
-          </button>
+          <Link href="/auth">
+            <button className="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-base px-8 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+              Get started free <ArrowRight className="w-4 h-4" />
+            </button>
+          </Link>
           <button className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground text-base px-8 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
             <Play className="w-4 h-4" /> Watch demo
           </button>
@@ -32,7 +37,7 @@ const Hero = () => {
           {/* <div className="rounded-xl border border-border shadow-2xl overflow-hidden bg-card">
             <img
               src={heroImage}
-              alt="AgileFlow dashboard screenshot"
+              alt="Jaljira dashboard screenshot"
               className="w-full"
             />
           </div> */}
@@ -41,7 +46,7 @@ const Hero = () => {
 
         <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-muted-foreground">
           {[
-            { label: "Teams using AgileFlow", value: "12,000+" },
+            { label: "Teams using Jaljira", value: "12,000+" },
             { label: "Tasks completed", value: "4.2M" },
             { label: "Uptime", value: "99.9%" },
           ].map(({ label, value }) => (
