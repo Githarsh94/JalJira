@@ -1,5 +1,8 @@
+"use client";
+
 import { Check } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 const plans = [
   {
@@ -126,15 +129,17 @@ const Pricing = () => {
                   )}
                 </div>
 
-                <button
-                  className={`w-full mb-6 inline-flex items-center justify-center rounded-md px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                    plan.popular
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary"
-                      : "border border-input bg-background hover:bg-accent hover:text-accent-foreground focus:ring-ring"
-                  }`}
-                >
-                  {plan.cta}
-                </button>
+                <Link href="/auth" className="w-full block mb-6">
+                  <button
+                    className={`w-full inline-flex items-center justify-center rounded-md px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      plan.popular
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary"
+                        : "border border-input bg-background hover:bg-accent hover:text-accent-foreground focus:ring-ring"
+                    }`}
+                  >
+                    {plan.cta}
+                  </button>
+                </Link>
 
                 <ul className="space-y-3">
                   {plan.features.map((feature) => (

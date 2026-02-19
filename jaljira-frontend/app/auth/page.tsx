@@ -1,10 +1,13 @@
+"use client";
+
 import { useState } from "react";
 import { Github, Droplet } from "lucide-react";
+import Image from "next/image";
 import teamCollaboration from "../assets/team-collaboration.png";
 
 type Tab = "login" | "signup";
 
-const Auth = () => {
+export default function AuthPage() {
   const [tab, setTab] = useState<Tab>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,7 +18,7 @@ const Auth = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Auth logic wired up when Lovable Cloud is enabled
+    // Auth logic wired up when backend is enabled
   };
 
   return (
@@ -74,7 +77,7 @@ const Auth = () => {
         {/* Heading */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground mb-2">
-            {isLogin ? "Welcome back to AgileFlow" : "Create your AgileFlow account"}
+            {isLogin ? "Welcome back to Jaljira" : "Create your Jaljira account"}
           </h1>
           <p className="text-sm text-muted-foreground">
             {isLogin
@@ -124,6 +127,7 @@ const Auth = () => {
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                required
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -131,7 +135,7 @@ const Auth = () => {
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
-              Email
+              Email Address
             </label>
             <input
               id="email"
@@ -139,20 +143,29 @@ const Auth = () => {
               placeholder="name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-foreground">
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password
+              </label>
+              {isLogin && (
+                <a href="#forgot" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </a>
+              )}
+            </div>
             <input
               id="password"
               type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
@@ -177,7 +190,7 @@ const Auth = () => {
             type="submit"
             className="w-full inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
-            {isLogin ? "Log In to AgileFlow →" : "Create Account →"}
+            {isLogin ? "Log In to Jaljira →" : "Create Account →"}
           </button>
         </form>
 
@@ -197,7 +210,7 @@ const Auth = () => {
       {/* Team Collaboration Image */}
     <div className="container mx-auto px-6 py-8">
       <div className="max-w-4xl mx-auto rounded-xl overflow-hidden shadow-lg">
-        <img
+        <Image
         src={teamCollaboration}
         alt="Team collaboration"
         className="w-full h-64 object-cover opacity-70"
@@ -223,12 +236,10 @@ const Auth = () => {
             </a>
           </nav>
           <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
-            © 2024 JALJIRA MANAGEMENT PLATFORM. ALL RIGHTS RESERVED.
+            © 2026 JALJIRA MANAGEMENT PLATFORM. ALL RIGHTS RESERVED.
           </p>
         </div>
       </footer>
     </div>
   );
-};
-
-export default Auth;
+}
