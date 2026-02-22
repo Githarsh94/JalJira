@@ -20,7 +20,7 @@ public class Organization {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plan_id")
-    private Plan purchasedAt;
+    private Plan planId;
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
@@ -68,12 +68,12 @@ public class Organization {
         this.createdAt = createdAt;
     }
     
-    public Plan getPurchasedAt() {
-        return purchasedAt;
+    public Plan getplanId() {
+        return planId;
     }
     
-    public void setPurchasedAt(Plan purchasedAt) {
-        this.purchasedAt = purchasedAt;
+    public void setplanId(Plan planId) {
+        this.planId = planId;
     }
     
     public LocalDateTime getUpdatedAt() {

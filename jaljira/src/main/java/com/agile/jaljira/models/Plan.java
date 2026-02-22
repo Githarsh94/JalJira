@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,12 +23,12 @@ public class Plan {
     private BigDecimal cost;
     
     @Column(nullable = false)
-    private LocalDateTime validity;
+    private Integer validity;
     
     // Constructors
     public Plan() {}
     
-    public Plan(Map<String, Object> criteria, BigDecimal cost, LocalDateTime validity) {
+    public Plan(Map<String, Object> criteria, BigDecimal cost, Integer validity) {
         this.criteria = criteria;
         this.cost = cost;
         this.validity = validity;
@@ -60,11 +59,11 @@ public class Plan {
         this.cost = cost;
     }
     
-    public LocalDateTime getValidity() {
+    public Integer getValidity() {
         return validity;
     }
     
-    public void setValidity(LocalDateTime validity) {
+    public void setValidity(Integer validity) {
         this.validity = validity;
     }
 }
