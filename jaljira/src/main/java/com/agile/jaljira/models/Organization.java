@@ -68,11 +68,11 @@ public class Organization {
         this.createdAt = createdAt;
     }
     
-    public Plan getplanId() {
+    public Plan getPlanId() {
         return planId;
     }
     
-    public void setplanId(Plan planId) {
+    public void setPlanId(Plan planId) {
         this.planId = planId;
     }
     
