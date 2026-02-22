@@ -18,6 +18,10 @@ public class Team {
     @JoinColumn(name = "manager_id")
     private User manager;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "org_id")
+    private Organization organization;
+    
     // Constructors
     public Team() {}
     
@@ -48,5 +52,13 @@ public class Team {
     
     public void setManager(User manager) {
         this.manager = manager;
+    }
+    
+    public Organization getOrganization() {
+        return organization;
+    }
+    
+    public void setOrganization(Organization organization) {
+        this.organization = organization;
     }
 }
