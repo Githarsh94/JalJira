@@ -5,82 +5,66 @@ import com.agile.jaljira.models.Role;
 import com.agile.jaljira.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class UserService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
-    
-    @Autowired
-    private UserRepository userRepository;
-    
+
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
     @Transactional
-    public User getOrCreateUser(OAuth2User oauth2User) {
-        String email = oauth2User.getAttribute("email");
-        
+    public User getOrCreateUser(Map<String, Object> attributes) {
+        String email = (String) attributes.get("email");
+
         logger.info("OAuth login attempt for email: {}", email);
-        logger.debug("OAuth2User attributes: {}", oauth2User.getAttributes());
-        
-        if (email == null || email.isEmpty()) {
-            logger.error("Email is null or empty in OAuth2User attributes");
+
+        if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email not provided by OAuth provider");
         }
-        
+
         Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
             logger.info("Existing user found for email: {}", email);
             return existingUser.get();
         }
-        
-        // Create new user with MEMBER role by default
+
         User newUser = new User();
         newUser.setEmail(email);
-        
-        // Handle different OAuth providers
+
         // Google provides: given_name, family_name
         // GitHub provides: name (full name), login (username)
-        String givenName = oauth2User.getAttribute("given_name");
-        String familyName = oauth2User.getAttribute("family_name");
-        String fullName = oauth2User.getAttribute("name");
-        
+        String givenName = (String) attributes.get("given_name");
+        String familyName = (String) attributes.get("family_name");
+        String fullName = (String) attributes.get("name");
+
         if (givenName != null && familyName != null) {
-            // Google-style attributes
             newUser.setFirstName(givenName);
             newUser.setLastName(familyName);
-            logger.info("Using given_name and family_name from OAuth provider");
         } else if (fullName != null) {
-            // GitHub-style attributes - split the full name
-            String[] nameParts = fullName.trim().split("\\s+", 2);
-            newUser.setFirstName(nameParts[0]);
-            if (nameParts.length > 1) {
-                newUser.setLastName(nameParts[1]);
-            } else {
-                newUser.setLastName(""); // Default to empty if no last name
-            }
-            logger.info("Parsed name from 'name' attribute: {} {}", newUser.getFirstName(), newUser.getLastName());
+            String[] parts = fullName.trim().split("\\s+", 2);
+            newUser.setFirstName(parts[0]);
+            newUser.setLastName(parts.length > 1 ? parts[1] : "");
         } else {
-            // Fallback - use email username as first name
-            String emailUsername = email.split("@")[0];
-            newUser.setFirstName(emailUsername);
+            newUser.setFirstName(email.split("@")[0]);
             newUser.setLastName("");
-            logger.warn("No name attributes found, using email username: {}", emailUsername);
         }
-        
+
         newUser.setRole(Role.MEMBER);
-        
-        logger.info("Creating new user: email={}, firstName={}, lastName={}, role={}", 
-                    email, newUser.getFirstName(), newUser.getLastName(), newUser.getRole());
-        
-        User savedUser = userRepository.save(newUser);
-        logger.info("User saved successfully with ID: {}", savedUser.getId());
-        
-        return savedUser;
+
+        logger.info("Creating new user: email={}, firstName={}, lastName={}",
+                email, newUser.getFirstName(), newUser.getLastName());
+
+        return userRepository.save(newUser);
     }
     
     @Transactional

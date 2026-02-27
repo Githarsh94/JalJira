@@ -21,7 +21,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  
+
+  # OAuth2 client credentials — used server-side for code exchange only
   security:
     oauth2:
       client:
@@ -29,37 +30,28 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID:}
             client-secret: ${GOOGLE_CLIENT_SECRET:}
-            scope: openid, profile, email
-            redirect-uri: "{baseUrl}/login/oauth2/code/google"
-            authorization-grant-type: authorization_code
-
           github:
             client-id: ${GITHUB_CLIENT_ID:}
             client-secret: ${GITHUB_CLIENT_SECRET:}
-            scope: read:user, user:email
-            redirect-uri: "{baseUrl}/login/oauth2/code/github"
-            authorization-grant-type: authorization_code
 
-        provider:
-          google:
-            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
-            token-uri: https://oauth2.googleapis.com/token
-            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
-            user-name-attribute: sub
+# JWT configuration
+jwt:
+  secret: ${JWT_SECRET:jaljira-dev-secret-key-change-in-production-min-32-chars!!}
+  expiration-ms: 86400000  # 24 hours
 
-          github:
-            authorization-uri: https://github.com/login/oauth/authorize
-            token-uri: https://github.com/login/oauth/access_token
-            user-info-uri: https://api.github.com/user
-            user-name-attribute: id
+# Frontend OAuth2 redirect URIs (where the frontend receives the auth code)
+app:
+  oauth2:
+    google:
+      redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:3000/auth/callback}
+    github:
+      redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:3000/auth/callback}
 
 logging:
   level:
     org.hibernate.SQL: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 server:
-
   port: 8080

@@ -1,18 +1,4 @@
 package com.agile.jaljira.controllers;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-
-@Controller
-public class DashboardController {
-
-    @GetMapping("/")
-    public String home() {
-        return "forward:/index.html";
-    }
-
-    @GetMapping("/dashboard")
-    public String dashboard() {
-        return "forward:/dashboard.html";
-    }
-}
+// DashboardController removed — frontend (Next.js) handles all UI routing.
+// Static HTML files (index.html, dashboard.html) are no longer served by Spring Boot.
