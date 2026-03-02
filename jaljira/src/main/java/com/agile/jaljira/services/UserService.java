@@ -66,18 +66,4 @@ public class UserService {
 
         return userRepository.save(newUser);
     }
-    
-    @Transactional
-    public User updateUserRole(String email, Role newRole, User requestedBy) {
-        // Only admins can change roles
-        if (requestedBy.getRole() != Role.ADMIN) {
-            throw new SecurityException("Only admins can change user roles");
-        }
-        
-        User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
-        user.setRole(newRole);
-        return userRepository.save(user);
-    }
 }

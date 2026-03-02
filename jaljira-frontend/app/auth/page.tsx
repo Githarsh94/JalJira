@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Github, Droplet } from "lucide-react";
 import Image from "next/image";
 import teamCollaboration from "../assets/team-collaboration.png";
 import { authConfig } from "../lib/auth-config";
-
-type Tab = "login" | "signup";
 
 function startOAuth(provider: "google" | "github") {
   localStorage.setItem("oauth_provider", provider);
@@ -14,19 +11,6 @@ function startOAuth(provider: "google" | "github") {
 }
 
 export default function AuthPage() {
-  const [tab, setTab] = useState<Tab>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [remember, setRemember] = useState(false);
-
-  const isLogin = tab === "login";
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Auth logic wired up when backend is enabled
-  };
-
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">
       {/* Header */}
@@ -39,14 +23,8 @@ export default function AuthPage() {
             <span className="font-semibold text-foreground text-lg">Jaljira</span>
           </div>
           <nav className="flex items-center gap-6">
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
-            </a>
-            <a href="#docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Docs
-            </a>
-            <a href="#support" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Support
+            <a href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Home
             </a>
           </nav>
         </div>
@@ -56,45 +34,19 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-background rounded-2xl shadow-lg border border-border p-8">
 
-          {/* Tabs */}
-          <div className="flex border-b border-border mb-8">
-            <button
-              onClick={() => setTab("login")}
-              className={`flex-1 pb-3 text-sm font-medium transition-colors border-b-2 ${isLogin
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setTab("signup")}
-              className={`flex-1 pb-3 text-sm font-medium transition-colors border-b-2 ${!isLogin
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-            >
-              Sign Up
-            </button>
-          </div>
-
           {/* Heading */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              {isLogin ? "Welcome back to Jaljira" : "Create your Jaljira account"}
-            </h1>
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Sign in to Jaljira</h1>
             <p className="text-sm text-muted-foreground">
-              {isLogin
-                ? "Enter your details to access your workspace."
-                : "Get started with your free account today."}
+              Choose a provider to get started.
             </p>
           </div>
 
           {/* Social Buttons */}
-          <div className="space-y-3 mb-6">
+          <div className="space-y-3">
             <button
               onClick={() => startOAuth("google")}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -106,114 +58,12 @@ export default function AuthPage() {
             </button>
             <button
               onClick={() => startOAuth("github")}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               <Github className="w-4 h-4" />
               Continue with GitHub
             </button>
           </div>
-
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or email login</span>
-            </div>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name field — Sign Up only */}
-            {!isLogin && (
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-foreground">
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password
-                </label>
-                {isLogin && (
-                  <a href="#forgot" className="text-xs text-primary hover:underline">
-                    Forgot password?
-                  </a>
-                )}
-              </div>
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-
-            {/* Remember me — Login only */}
-            {isLogin && (
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                />
-                <label htmlFor="remember" className="text-sm text-foreground cursor-pointer">
-                  Remember me for 30 days
-                </label>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              {isLogin ? "Log In to Jaljira →" : "Create Account →"}
-            </button>
-          </form>
-
-          {/* Footer link */}
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => setTab(isLogin ? "signup" : "login")}
-              className="text-primary font-medium hover:underline"
-            >
-              {isLogin ? "Create an account" : "Sign in"}
-            </button>
-          </p>
         </div>
       </div>
 
@@ -231,20 +81,6 @@ export default function AuthPage() {
       {/* Footer */}
       <footer className="bg-background border-t border-border py-8">
         <div className="container mx-auto px-6">
-          <nav className="flex justify-center gap-8 mb-4">
-            <a href="#privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Privacy Policy
-            </a>
-            <a href="#terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Terms of Service
-            </a>
-            <a href="#cookie" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Cookie Policy
-            </a>
-            <a href="#security" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Security
-            </a>
-          </nav>
           <p className="text-center text-xs text-muted-foreground uppercase tracking-wider">
             © 2026 JALJIRA MANAGEMENT PLATFORM. ALL RIGHTS RESERVED.
           </p>

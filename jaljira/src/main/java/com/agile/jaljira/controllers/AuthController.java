@@ -25,19 +25,19 @@ public class AuthController {
     private final RestClient restClient;
 
     // Google config
-    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    @Value("${app.oauth2.google.client-id}")
     private String googleClientId;
-    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    @Value("${app.oauth2.google.client-secret}")
     private String googleClientSecret;
-    @Value("${app.oauth2.google.redirect-uri:http://localhost:3000/auth/callback}")
+    @Value("${app.oauth2.google.redirect-uri}")
     private String googleRedirectUri;
 
     // GitHub config
-    @Value("${spring.security.oauth2.client.registration.github.client-id}")
+    @Value("${app.oauth2.github.client-id}")
     private String githubClientId;
-    @Value("${spring.security.oauth2.client.registration.github.client-secret}")
+    @Value("${app.oauth2.github.client-secret}")
     private String githubClientSecret;
-    @Value("${app.oauth2.github.redirect-uri:http://localhost:3000/auth/callback}")
+    @Value("${app.oauth2.github.redirect-uri}")
     private String githubRedirectUri;
 
     public AuthController(UserService userService, JwtService jwtService) {

@@ -22,29 +22,21 @@ spring:
       hibernate:
         format_sql: true
 
-  # OAuth2 client credentials — used server-side for code exchange only
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID:}
-            client-secret: ${GOOGLE_CLIENT_SECRET:}
-          github:
-            client-id: ${GITHUB_CLIENT_ID:}
-            client-secret: ${GITHUB_CLIENT_SECRET:}
-
 # JWT configuration
 jwt:
   secret: ${JWT_SECRET:jaljira-dev-secret-key-change-in-production-min-32-chars!!}
   expiration-ms: 86400000  # 24 hours
 
-# Frontend OAuth2 redirect URIs (where the frontend receives the auth code)
+# OAuth2 credentials for server-side code exchange
 app:
   oauth2:
     google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
       redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:3000/auth/callback}
     github:
+      client-id: ${GITHUB_CLIENT_ID:}
+      client-secret: ${GITHUB_CLIENT_SECRET:}
       redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:3000/auth/callback}
 
 logging:
