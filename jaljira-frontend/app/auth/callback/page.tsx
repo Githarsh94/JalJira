@@ -20,13 +20,14 @@ export default function AuthCallback() {
         }
 
         exchangeCodeForToken(provider, code)
-            .then(({ token, user }) => {
-                console.log("Received token and user info: ", { token, user });
-                setToken(token);
+            .then((data) => {
+                console.log("Token exchange result:", data);
                 localStorage.removeItem("oauth_provider");
-                if (user) {
+                if (data.registered && data.token) {
+                    setToken(data.token);
                     window.location.href = "/dashboard";
                 } else {
+                    if (data.email) localStorage.setItem("onboarding_email", data.email);
                     window.location.href = "/onboarding";
                 }
             })

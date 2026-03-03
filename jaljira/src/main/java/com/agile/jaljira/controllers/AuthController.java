@@ -156,24 +156,25 @@ public class AuthController {
     private ResponseEntity<Map<String, Object>> buildAuthResponse(Map<String, Object> userInfo) {
         User user = userService.getUser(userInfo);
         logger.info("User: {}", user);
-        if(user == null) {
-            logger.info("User not found, returning null token and user");
-            return ResponseEntity.ok(Map.of(
-                "token", null,
-                "user", null
-            ));
-        }
-        String jwt = jwtService.generateToken(user);
+        Map<String, Object> response = new java.util.HashMap<>();
 
-        return ResponseEntity.ok(Map.of(
-                "token", jwt,
-                "user", Map.of(
-                        "id", user.getId().toString(),
-                        "email", user.getEmail(),
-                        "firstName", user.getFirstName() != null ? user.getFirstName() : "",
-                        "lastName", user.getLastName() != null ? user.getLastName() : "",
-                        "role", user.getRole().name()
-                )
+        if (user == null) {
+            logger.info("User not found, returning registered=false");
+            response.put("registered", false);
+            response.put("email", userInfo.get("email"));
+            return ResponseEntity.ok(response);
+        }
+
+        String jwt = jwtService.generateToken(user);
+        response.put("registered", true);
+        response.put("token", jwt);
+        response.put("user", Map.of(
+                "id", user.getId().toString(),
+                "email", user.getEmail(),
+                "firstName", user.getFirstName() != null ? user.getFirstName() : "",
+                "lastName", user.getLastName() != null ? user.getLastName() : "",
+                "role", user.getRole().name()
         ));
+        return ResponseEntity.ok(response);
     }
 }

@@ -55,7 +55,7 @@ export async function apiFetch<T = unknown>(
 export async function exchangeCodeForToken(
     provider: "google" | "github",
     code: string
-): Promise<{ token: string; user: AuthUser }> {
+): Promise<{ registered: boolean; token?: string; user?: AuthUser; email?: string }> {
     const res = await fetch(
         `${authConfig.apiUrl}/api/auth/oauth2/${provider}`,
         {
@@ -65,14 +65,14 @@ export async function exchangeCodeForToken(
         }
     );
 
-    console.log("Token exchange response: ", await res.json());
+    const data = await res.json().catch(() => null);
+    console.log("Token exchange response: ", data);
+
     if (!res.ok) {
-        console.log("Token exchange failed: ", res.status, res.statusText);
-        const error = await res.json().catch(() => ({ error: "Authentication failed" }));
-        throw new Error(error.error || "Authentication failed");
+        throw new Error(data?.error || "Authentication failed");
     }
 
-    return res.json();
+    return data;
 }
 
 export interface AuthUser {

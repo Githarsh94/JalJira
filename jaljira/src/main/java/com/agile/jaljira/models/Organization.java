@@ -24,7 +24,10 @@ public class Organization {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
+    @Column(name = "country")
+    private String country;
+
     // Constructors
     public Organization() {}
     
@@ -82,5 +85,13 @@ public class Organization {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+}
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
     }
 }
