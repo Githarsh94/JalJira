@@ -38,11 +38,11 @@ export async function apiFetch<T = unknown>(
         headers,
     });
 
-    if (res.status === 401) {
-        removeToken();
-        window.location.href = "/auth";
-        throw new Error("Unauthorized");
-    }
+    // if (res.status === 401) {
+    //     removeToken();
+    //     window.location.href = "/auth";
+    //     throw new Error("Unauthorized");
+    // }
 
     if (!res.ok) {
         const error = await res.json().catch(() => ({ message: res.statusText }));
@@ -55,7 +55,7 @@ export async function apiFetch<T = unknown>(
 export async function exchangeCodeForToken(
     provider: "google" | "github",
     code: string
-): Promise<{ token: string; user: AuthUser }> {
+): Promise<{ registered: boolean; token?: string; user?: AuthUser; email?: string }> {
     const res = await fetch(
         `${authConfig.apiUrl}/api/auth/oauth2/${provider}`,
         {
@@ -65,12 +65,14 @@ export async function exchangeCodeForToken(
         }
     );
 
+    const data = await res.json().catch(() => null);
+    console.log("Token exchange response: ", data);
+
     if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: "Authentication failed" }));
-        throw new Error(error.error || "Authentication failed");
+        throw new Error(data?.error || "Authentication failed");
     }
 
-    return res.json();
+    return data;
 }
 
 export interface AuthUser {

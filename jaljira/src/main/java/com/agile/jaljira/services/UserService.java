@@ -23,7 +23,7 @@ public class UserService {
     }
 
     @Transactional
-    public User getOrCreateUser(Map<String, Object> attributes) {
+    public User getUser(Map<String, Object> attributes) {
         String email = (String) attributes.get("email");
 
         logger.info("OAuth login attempt for email: {}", email);
@@ -38,32 +38,33 @@ public class UserService {
             return existingUser.get();
         }
 
-        User newUser = new User();
-        newUser.setEmail(email);
+        // User newUser = new User();
+        // newUser.setEmail(email);
 
-        // Google provides: given_name, family_name
-        // GitHub provides: name (full name), login (username)
-        String givenName = (String) attributes.get("given_name");
-        String familyName = (String) attributes.get("family_name");
-        String fullName = (String) attributes.get("name");
+        // // Google provides: given_name, family_name
+        // // GitHub provides: name (full name), login (username)
+        // String givenName = (String) attributes.get("given_name");
+        // String familyName = (String) attributes.get("family_name");
+        // String fullName = (String) attributes.get("name");
 
-        if (givenName != null && familyName != null) {
-            newUser.setFirstName(givenName);
-            newUser.setLastName(familyName);
-        } else if (fullName != null) {
-            String[] parts = fullName.trim().split("\\s+", 2);
-            newUser.setFirstName(parts[0]);
-            newUser.setLastName(parts.length > 1 ? parts[1] : "");
-        } else {
-            newUser.setFirstName(email.split("@")[0]);
-            newUser.setLastName("");
-        }
+        // if (givenName != null && familyName != null) {
+        //     newUser.setFirstName(givenName);
+        //     newUser.setLastName(familyName);
+        // } else if (fullName != null) {
+        //     String[] parts = fullName.trim().split("\\s+", 2);
+        //     newUser.setFirstName(parts[0]);
+        //     newUser.setLastName(parts.length > 1 ? parts[1] : "");
+        // } else {
+        //     newUser.setFirstName(email.split("@")[0]);
+        //     newUser.setLastName("");
+        // }
 
-        newUser.setRole(Role.MEMBER);
+        // newUser.setRole(Role.MEMBER);
 
-        logger.info("Creating new user: email={}, firstName={}, lastName={}",
-                email, newUser.getFirstName(), newUser.getLastName());
+        // logger.info("Creating new user: email={}, firstName={}, lastName={}",
+        //         email, newUser.getFirstName(), newUser.getLastName());
 
-        return userRepository.save(newUser);
+        // return userRepository.save(newUser);
+        return null;
     }
 }

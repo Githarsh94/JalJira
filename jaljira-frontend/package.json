@@ -9,7 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@types/country-select-js": "^1.0.5",
+    "@types/jquery": "^4.0.0",
     "clsx": "^2.1.1",
+    "country-select-js": "^2.1.0",
+    "country-telephone-data": "^0.6.3",
+    "jquery": "^4.0.0",
     "lucide-react": "^0.574.0",
     "next": "16.1.6",
     "react": "19.2.3",
