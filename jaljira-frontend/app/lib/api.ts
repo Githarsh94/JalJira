@@ -38,11 +38,11 @@ export async function apiFetch<T = unknown>(
         headers,
     });
 
-    if (res.status === 401) {
-        removeToken();
-        window.location.href = "/auth";
-        throw new Error("Unauthorized");
-    }
+    // if (res.status === 401) {
+    //     removeToken();
+    //     window.location.href = "/auth";
+    //     throw new Error("Unauthorized");
+    // }
 
     if (!res.ok) {
         const error = await res.json().catch(() => ({ message: res.statusText }));
@@ -65,7 +65,9 @@ export async function exchangeCodeForToken(
         }
     );
 
+    console.log("Token exchange response: ", await res.json());
     if (!res.ok) {
+        console.log("Token exchange failed: ", res.status, res.statusText);
         const error = await res.json().catch(() => ({ error: "Authentication failed" }));
         throw new Error(error.error || "Authentication failed");
     }

@@ -20,10 +20,15 @@ export default function AuthCallback() {
         }
 
         exchangeCodeForToken(provider, code)
-            .then(({ token }) => {
+            .then(({ token, user }) => {
+                console.log("Received token and user info: ", { token, user });
                 setToken(token);
                 localStorage.removeItem("oauth_provider");
-                window.location.href = "/dashboard";
+                if (user) {
+                    window.location.href = "/dashboard";
+                } else {
+                    window.location.href = "/onboarding";
+                }
             })
             .catch((err) => {
                 setError(err.message);

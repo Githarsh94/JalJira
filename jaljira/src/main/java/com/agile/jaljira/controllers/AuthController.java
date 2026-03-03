@@ -154,7 +154,15 @@ public class AuthController {
     }
 
     private ResponseEntity<Map<String, Object>> buildAuthResponse(Map<String, Object> userInfo) {
-        User user = userService.getOrCreateUser(userInfo);
+        User user = userService.getUser(userInfo);
+        logger.info("User: {}", user);
+        if(user == null) {
+            logger.info("User not found, returning null token and user");
+            return ResponseEntity.ok(Map.of(
+                "token", null,
+                "user", null
+            ));
+        }
         String jwt = jwtService.generateToken(user);
 
         return ResponseEntity.ok(Map.of(
