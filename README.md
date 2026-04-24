@@ -9,6 +9,53 @@
 **JalJira** is a Jira-like agile project management system built with Spring Boot and PostgreSQL. This project is currently in the **initial development phase** with database models and configuration complete.
 
 ---
+# Set up Instructions for this Project
+1.Add application-secrets.yml file into jaljira/src/resources which will have information like this:
+spring:
+  datasource:
+    url: <supabase-url>
+    username: <supabase-username>
+    password: <supabase-passwd>
+    driver-class-name: org.postgresql.Driver
+
+app:
+  oauth2:
+    google:
+      client-id: <google-auth-provider-client-id>
+      client-secret: <google-auth-provider-client-secret>
+    github:
+      client-id: <github-auth-provider-client-id>
+      client-secret: <github-auth-provider-client-secret>
+      
+2.Create .env file in jaljira/
+# Supabase Database Configuration
+# Get these values from your Supabase project settings > Database
+
+# Database Host (Connection Pooler - found in Database Settings > Connection String)
+SUPABASE_DB_HOST=<supabase-db-host>
+
+# Database Port (6543 for pooler, 5432 for direct connection)
+SUPABASE_DB_PORT=<supabase-port>
+
+# Database Name (usually postgres)
+SUPABASE_DB_NAME=<supabase-db_name>
+
+# Database User (format: postgres.YOUR_PROJECT_ID for pooler)
+SUPABASE_DB_USER=<supabase-username>
+
+# Database Password (found in Database Settings > Database password)
+SUPABASE_DB_PASSWORD=<supabase-passwd>
+
+3.Create .env.local file into jaljira-frontend/
+# Backend API URL
+NEXT_PUBLIC_API_URL=http://localhost:8080
+
+# OAuth2 Client IDs (public — safe to expose in frontend)
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=<google-auth-provider-client-id>
+NEXT_PUBLIC_GITHUB_CLIENT_ID=<google-auth-provider-client-secret>
+
+# OAuth2 Redirect URI (must match Google/GitHub console settings)
+NEXT_PUBLIC_OAUTH_REDIRECT_URI=http://localhost:3000/auth/callback
 
 ## 📋 Table of Contents
 
