@@ -28,6 +28,9 @@ public class User {
     @Column(nullable = false)
     private Role role = Role.MEMBER;
     
+    @Column(nullable = false)
+    private boolean isOnboarded = false;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     private Team team;
@@ -118,5 +121,13 @@ public class User {
     
     public void setOrganization(Organization organization) {
         this.organization = organization;
+    }
+    
+    public boolean isOnboarded() {
+        return isOnboarded;
+    }
+    
+    public void setOnboarded(boolean onboarded) {
+        isOnboarded = onboarded;
     }
 }

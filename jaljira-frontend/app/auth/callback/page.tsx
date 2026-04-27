@@ -5,6 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { exchangeCodeForToken, setToken } from "../../lib/api";
 import { Loader2 } from "lucide-react";
 
+const USER_DATA_KEY = "jaljira_user";
+
+export function setUserData(user: any): void {
+    localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+}
+
 export default function AuthCallback() {
     const searchParams = useSearchParams();
     const [error, setError] = useState<string | null>(null);
@@ -20,10 +26,17 @@ export default function AuthCallback() {
         }
 
         exchangeCodeForToken(provider, code)
-            .then(({ token }) => {
+            .then(({ token, user }) => {
                 setToken(token);
+                setUserData(user);
                 localStorage.removeItem("oauth_provider");
-                window.location.href = "/dashboard";
+                
+                // Check if user is onboarded
+                if (!user.isOnboarded) {
+                    window.location.href = "/auth/onboarding";
+                } else {
+                    window.location.href = "/dashboard";
+                }
             })
             .catch((err) => {
                 setError(err.message);

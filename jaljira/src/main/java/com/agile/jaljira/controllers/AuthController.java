@@ -164,7 +164,8 @@ public class AuthController {
                         "email", user.getEmail(),
                         "firstName", user.getFirstName() != null ? user.getFirstName() : "",
                         "lastName", user.getLastName() != null ? user.getLastName() : "",
-                        "role", user.getRole().name()
+                        "role", user.getRole().name(),
+                        "isOnboarded", user.isOnboarded()
                 )
         ));
     }
