@@ -98,6 +98,8 @@ public class OnboardingService {
         long adminCount = userRepository.countByOrganization_IdAndRole(savedOrg.getId(), Role.ADMIN);
         if (adminCount >= 2) {
             logger.warn("Organization {} already has {} admins, denying onboarding for user {}", savedOrg.getId(), adminCount, userId);
+            //delete this new user as we can't onboard them
+            userRepository.delete(user);
             return Map.of("success", false, "error", "we already have 2 admins per org and we can't provide access to more");
         }
 

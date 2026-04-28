@@ -114,3 +114,31 @@ export interface Plan {
     cost: string;
     validity: number;
 }
+
+export interface SprintTemplate {
+    id: string;
+    name: string;
+    description: string;
+    durationDays: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export async function getSprintTemplates(): Promise<SprintTemplate[]> {
+    return apiFetch<SprintTemplate[]>("/api/sprint-templates");
+}
+
+export async function createSprint(
+    organizationId: string,
+    sprintTemplateId: string,
+    startDate: string
+): Promise<{ success: boolean; message?: string; error?: string; sprint_id?: string; start_date?: string; end_date?: string }> {
+    return apiFetch("/api/sprints", {
+        method: "POST",
+        body: JSON.stringify({
+            org_id: organizationId,
+            sprint_template_id: sprintTemplateId,
+            start_date: startDate,
+        }),
+    });
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getPlans, submitOnboarding, Plan } from "../../lib/api";
+import { getPlans, submitOnboarding, Plan, getSprintTemplates, SprintTemplate, createSprint } from "../../lib/api";
 import { Loader2, AlertCircle, Check } from "lucide-react";
 
 const USER_DATA_KEY = "jaljira_user";
@@ -18,14 +18,18 @@ export default function OnboardingPage() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
     const [plans, setPlans] = useState<Plan[]>([]);
+    const [sprintTemplates, setSprintTemplates] = useState<SprintTemplate[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [annual, setAnnual] = useState(true);
+    const [organizationId, setOrganizationId] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         organization_name: "",
         plan_id: "",
+        sprint_template_id: "",
+        start_date: "",
     });
 
     useEffect(() => {
@@ -43,13 +47,14 @@ export default function OnboardingPage() {
             return;
         }
 
-        getPlans()
-            .then((fetchedPlans) => {
+        Promise.all([getPlans(), getSprintTemplates()])
+            .then(([fetchedPlans, fetchedTemplates]) => {
                 setPlans(fetchedPlans);
+                setSprintTemplates(fetchedTemplates);
                 setLoading(false);
             })
             .catch((err) => {
-                setError(err.message || "Failed to load plans");
+                setError(err.message || "Failed to load data");
                 setLoading(false);
             });
     }, [router]);
@@ -58,6 +63,16 @@ export default function OnboardingPage() {
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
         const { name, value } = e.target;
+        
+        // Validate date range if it's the start_date field
+        if (name === "start_date" && value) {
+            if (!isDateInRange(value)) {
+                setError(`Invalid selection. The sprint start date must be within ${getFormattedRange()}`);
+                return;
+            }
+            setError(null);
+        }
+        
         setFormData((prev) => ({
             ...prev,
             [name]: value,
@@ -71,11 +86,70 @@ export default function OnboardingPage() {
         }));
     };
 
+    const handleSprintTemplateSelect = (templateId: string) => {
+        setFormData((prev) => ({
+            ...prev,
+            sprint_template_id: templateId,
+        }));
+    };
+
     const getPlanMetadata = (plan: Plan) => {
         if (plan.criteria && typeof plan.criteria === "object") {
             return plan.criteria as any;
         }
         return null;
+    };
+
+    /**
+     * Get date range for sprint start date (current date ±7 days)
+     */
+    const getDateRange = () => {
+        const today = new Date();
+        const minDate = new Date(today);
+        minDate.setDate(today.getDate() - 7);
+        
+        const maxDate = new Date(today);
+        maxDate.setDate(today.getDate() + 7);
+        
+        return { minDate, maxDate, today };
+    };
+
+    /**
+     * Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+     */
+    const formatDateForInput = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    /**
+     * Validate if selected date is within allowed range
+     */
+    const isDateInRange = (dateStr: string): boolean => {
+        if (!dateStr) return true;
+        
+        const { minDate, maxDate } = getDateRange();
+        const selectedDate = new Date(dateStr);
+        
+        return selectedDate >= minDate && selectedDate <= maxDate;
+    };
+
+    /**
+     * Get formatted range display string
+     */
+    const getFormattedRange = (): string => {
+        const { minDate, maxDate } = getDateRange();
+        const options: Intl.DateTimeFormatOptions = { 
+            month: "short", 
+            day: "numeric", 
+            year: "numeric" 
+        };
+        
+        return `${minDate.toLocaleDateString("en-US", options)} to ${maxDate.toLocaleDateString("en-US", options)}`;
     };
 
     const validateForm = (): boolean => {
@@ -85,6 +159,14 @@ export default function OnboardingPage() {
         }
         if (!formData.plan_id) {
             setError("Please select a plan");
+            return false;
+        }
+        if (!formData.sprint_template_id) {
+            setError("Please select a sprint template");
+            return false;
+        }
+        if (!formData.start_date) {
+            setError("Please select a start date");
             return false;
         }
         return true;
@@ -101,20 +183,31 @@ export default function OnboardingPage() {
         setSubmitting(true);
 
         try {
-            const result = await submitOnboarding(
+            // First, submit onboarding to get organization created
+            const onboardingResult = await submitOnboarding(
                 user.id,
                 formData.organization_name,
                 formData.plan_id
             );
-            console.log("Onboarding result:", result);
-            if (result.success) {
+
+            if (!onboardingResult.success) {
+                setError(onboardingResult.message || "Onboarding failed");
+                setSubmitting(false);
+                return;
+            }
+
+            // Now create the sprint for the organization
+            const sprintResult = await createSprint(
+                onboardingResult.organization_id,
+                formData.sprint_template_id,
+                formData.start_date
+            );
+
+            if (sprintResult.success) {
                 localStorage.removeItem(USER_DATA_KEY);
                 router.push("/dashboard");
             } else {
-                //pop up or descrptive message about why onboarding failed
-                // then redirect home page localhost:3000/
-                console.log("Will go back to home page after showing error message");
-                setError(result.message || "Onboarding failed");
+                setError(sprintResult.error || "Failed to create sprint");
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "An error occurred");
@@ -139,29 +232,46 @@ export default function OnboardingPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-6xl mx-auto">
-                <div className="bg-white rounded-lg shadow-lg p-8">
-                    {/* Header */}
-                    <div className="mb-12">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            Welcome, {user.firstName || user.email}!
-                        </h1>
-                        <p className="text-gray-600">
-                            Let's set up your organization to get started.
-                        </p>
-                    </div>
-
-                    {/* Error Alert */}
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-red-800">{error}</p>
+        <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
+            {/* Header */}
+            <header className="bg-white border-b border-slate-200 shadow-sm">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900">JalJira</h2>
+                            <p className="text-sm text-gray-600">Agile Project Management</p>
                         </div>
-                    )}
+                        <div className="text-right text-sm text-gray-600">
+                            Step 2 of 2: Configuration
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Main Content */}
+            <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-6xl mx-auto">
+                    <div className="bg-white rounded-lg shadow-lg p-8">
+                        {/* Header */}
+                        <div className="mb-12">
+                            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                                Welcome, {user.firstName || user.email}!
+                            </h1>
+                            <p className="text-gray-600">
+                                Let's set up your organization to get started.
+                            </p>
+                        </div>
+
+                        {/* Error Alert */}
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-red-800">{error}</p>
+                            </div>
+                        )}
+
+                        {/* Form */}
+                        <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Organization Name */}
                         <div>
                             <label
@@ -342,6 +452,97 @@ export default function OnboardingPage() {
                             )}
                         </div>
 
+                        {/* Sprint Template Selection Section */}
+                        {formData.plan_id && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-900 mb-4">
+                                    Select Sprint Configuration *
+                                </label>
+
+                                {sprintTemplates.length === 0 ? (
+                                    <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-600">
+                                        No sprint templates available
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {sprintTemplates.map((template) => {
+                                            const isSelected = formData.sprint_template_id === template.id;
+
+                                            return (
+                                                <button
+                                                    key={template.id}
+                                                    type="button"
+                                                    onClick={() => handleSprintTemplateSelect(template.id)}
+                                                    disabled={submitting}
+                                                    className={`rounded-lg border p-6 text-left transition-all ${
+                                                        isSelected
+                                                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500"
+                                                            : "border-gray-200 bg-white hover:border-gray-300"
+                                                    } ${
+                                                        submitting
+                                                            ? "opacity-50 cursor-not-allowed"
+                                                            : "cursor-pointer"
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <h4 className="font-semibold text-gray-900 mb-1">
+                                                                {template.name}
+                                                            </h4>
+                                                            <p className="text-sm text-gray-600 mb-2">
+                                                                {template.description}
+                                                            </p>
+                                                            <p className="text-xs text-blue-600 font-medium">
+                                                                {template.durationDays} day sprint cycle
+                                                            </p>
+                                                        </div>
+                                                        <div
+                                                            className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                                                                isSelected
+                                                                    ? "border-blue-600 bg-blue-600"
+                                                                    : "border-gray-300 bg-white"
+                                                            }`}
+                                                        >
+                                                            {isSelected && (
+                                                                <Check className="w-3 h-3 text-white" />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Sprint Start Date Section */}
+                        {formData.sprint_template_id && (
+                            <div>
+                                <label
+                                    htmlFor="start_date"
+                                    className="block text-sm font-medium text-gray-900 mb-2"
+                                >
+                                    Sprint Start Date *
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    id="start_date"
+                                    name="start_date"
+                                    value={formData.start_date}
+                                    onChange={handleInputChange}
+                                    min={formatDateForInput(getDateRange().minDate)}
+                                    max={formatDateForInput(getDateRange().maxDate)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                    disabled={submitting}
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                    The sprint end date will be calculated automatically. Allowed date range: <span className="font-semibold text-gray-700">{getFormattedRange()}</span>
+                                </p>
+                            </div>
+                        )}
+
                         {/* Submit Button */}
                         <div className="pt-6">
                             <button
@@ -360,8 +561,31 @@ export default function OnboardingPage() {
                             </button>
                         </div>
                     </form>
+                    </div>
                 </div>
-            </div>
+            </main>
+
+            {/* Footer */}
+            <footer className="bg-white border-t border-slate-200 mt-auto">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-600">
+                            © 2026 JalJira. All rights reserved.
+                        </p>
+                        <div className="flex gap-6 text-sm">
+                            <a href="#" className="text-gray-600 hover:text-gray-900 transition">
+                                Privacy
+                            </a>
+                            <a href="#" className="text-gray-600 hover:text-gray-900 transition">
+                                Terms
+                            </a>
+                            <a href="#" className="text-gray-600 hover:text-gray-900 transition">
+                                Support
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 }

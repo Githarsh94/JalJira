@@ -4,14 +4,14 @@ const testimonials = [
     role: "Engineering Manager, Stripe",
     avatar: "SC",
     quote:
-      "AgileFlow cut our sprint planning time in half. The GitHub integration is seamless — our engineers actually enjoy updating tickets now.",
+      "JalJira cut our sprint planning time in half. The GitHub integration is seamless — our engineers actually enjoy updating tickets now.",
   },
   {
     name: "Marcus Rivera",
     role: "CTO, Loom",
     avatar: "MR",
     quote:
-      "We evaluated 6 different tools. AgileFlow was the only one that didn't require us to change how we work. It just fit.",
+      "We evaluated 6 different tools. JalJira was the only one that didn't require us to change how we work. It just fit.",
   },
   {
     name: "Priya Patel",

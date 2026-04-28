@@ -43,7 +43,7 @@ const Features = () => {
             Everything your team needs
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            From planning to deployment, AgileFlow brings your entire workflow into one place.
+            From planning to deployment, JalJira brings your entire workflow into one place.
           </p>
         </div>
 
