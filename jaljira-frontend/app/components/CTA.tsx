@@ -15,14 +15,9 @@ const CTA = () => {
             Join 12,000+ teams shipping faster with Jaljira. Start for free — no credit card needed.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/auth">
               <button className="inline-flex items-center justify-center gap-2 rounded-md bg-background text-foreground hover:bg-background/90 text-base px-8 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                Start for free <ArrowRight className="w-4 h-4" />
+                Talk to sales <ArrowRight className="w-4 h-4" />
               </button>
-            </Link>
-            <button className="inline-flex items-center justify-center gap-2 rounded-md text-primary-foreground hover:bg-primary-foreground/10 text-base px-8 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-foreground/50 focus:ring-offset-2">
-              Talk to sales
-            </button>
           </div>
         </div>
       </div>

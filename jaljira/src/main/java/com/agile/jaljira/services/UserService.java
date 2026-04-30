@@ -59,7 +59,7 @@ public class UserService {
             newUser.setLastName("");
         }
 
-        newUser.setRole(Role.MEMBER);
+        newUser.setRole(Role.ADMIN);
 
         logger.info("Creating new user: email={}, firstName={}, lastName={}",
                 email, newUser.getFirstName(), newUser.getLastName());

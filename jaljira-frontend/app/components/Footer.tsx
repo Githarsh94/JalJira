@@ -1,4 +1,4 @@
-import { Zap } from "lucide-react";
+import { Droplet } from "lucide-react";
 
 const Footer = () => {
   const sections = [
@@ -27,9 +27,9 @@ const Footer = () => {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-                <Zap className="w-4 h-4 text-primary-foreground" />
+                <Droplet className="w-4 h-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-foreground">AgileFlow</span>
+              <span className="font-semibold text-foreground">JalJira</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Project management for modern engineering teams.

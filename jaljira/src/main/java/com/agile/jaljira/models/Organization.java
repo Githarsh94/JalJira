@@ -32,6 +32,11 @@ public class Organization {
         this.organisationName = organisationName;
     }
     
+    public Organization(String organisationName, Plan planId) {
+        this.organisationName = organisationName;
+        this.planId = planId;
+    }
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

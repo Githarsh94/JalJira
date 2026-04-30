@@ -45,9 +45,11 @@ export async function apiFetch<T = unknown>(
     }
 
     if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(error.message || "Request failed");
-    }
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(
+        errorData.error || "Request failed"
+    );
+}
 
     return res.json();
 }
@@ -79,9 +81,64 @@ export interface AuthUser {
     firstName: string;
     lastName: string;
     role: string;
+    isOnboarded: boolean;
 }
 
 export function logout(): void {
     removeToken();
     window.location.href = "/auth";
+}
+
+export async function getPlans(): Promise<Plan[]> {
+    return apiFetch<Plan[]>("/api/onboarding/plans");
+}
+
+export async function submitOnboarding(
+    userId: string,
+    organizationName: string,
+    planId: string
+): Promise<{ success: boolean; message: string; organization_id: string }> {
+    return apiFetch("/api/onboarding/submit", {
+        method: "POST",
+        body: JSON.stringify({
+            user_id: userId,
+            organization_name: organizationName,
+            plan_id: planId,
+        }),
+    });
+}
+
+export interface Plan {
+    id: string;
+    criteria: Record<string, unknown>;
+    cost: string;
+    validity: number;
+}
+
+export interface SprintTemplate {
+    id: string;
+    name: string;
+    description: string;
+    durationDays: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export async function getSprintTemplates(): Promise<SprintTemplate[]> {
+    return apiFetch<SprintTemplate[]>("/api/sprint-templates");
+}
+
+export async function createSprint(
+    organizationId: string,
+    sprintTemplateId: string,
+    startDate: string
+): Promise<{ success: boolean; message?: string; error?: string; sprint_id?: string; start_date?: string; end_date?: string }> {
+    return apiFetch("/api/sprints", {
+        method: "POST",
+        body: JSON.stringify({
+            org_id: organizationId,
+            sprint_template_id: sprintTemplateId,
+            start_date: startDate,
+        }),
+    });
 }
