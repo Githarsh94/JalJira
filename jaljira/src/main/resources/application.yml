@@ -29,6 +29,8 @@ jwt:
 
 # OAuth2 credentials for server-side code exchange
 app:
+  invitation:
+    base-url: ${INVITATION_BASE_URL:http://localhost:3000}
   oauth2:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}

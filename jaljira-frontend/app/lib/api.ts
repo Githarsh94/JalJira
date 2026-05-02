@@ -142,3 +142,51 @@ export async function createSprint(
         }),
     });
 }
+
+// Team Management APIs
+export interface Team {
+    id: string;
+    teamName: string;
+    description: string;
+    manager?: {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+    };
+    organization?: {
+        id: string;
+        organisationName: string;
+    };
+}
+
+export async function getTeamsByOrganization(organizationId: string): Promise<Team[]> {
+    return apiFetch<Team[]>(`/api/teams/org/${organizationId}`);
+}
+
+export async function createTeam(
+    organizationId: string,
+    teamName: string,
+    description: string
+): Promise<{ success: boolean; message: string; team_id?: string; team_name?: string; error?: string }> {
+    return apiFetch("/api/teams", {
+        method: "POST",
+        body: JSON.stringify({
+            org_id: organizationId,
+            team_name: teamName,
+            description,
+        }),
+    });
+}
+
+export async function assignManagerToTeam(
+    teamId: string,
+    managerEmail: string
+): Promise<{ success: boolean; message: string; manager_email?: string; is_new_manager?: boolean; error?: string }> {
+    return apiFetch(`/api/teams/${teamId}/assign-manager`, {
+        method: "POST",
+        body: JSON.stringify({
+            manager_email: managerEmail,
+        }),
+    });
+}
