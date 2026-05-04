@@ -14,6 +14,22 @@ spring:
     password: ${DB_PASSWORD:}
     driver-class-name: ${DB_DRIVER:org.h2.Driver}
 
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
   jpa:
     hibernate:
       ddl-auto: validate       # safe default: only validate schema, don't modify
@@ -29,6 +45,9 @@ jwt:
 
 # OAuth2 credentials for server-side code exchange
 app:
+  email:
+    from: ${MAIL_FROM:noreply@jaljira.com}
+    from-name: ${MAIL_FROM_NAME:Jaljira Team}
   invitation:
     base-url: ${INVITATION_BASE_URL:http://localhost:3000}
   oauth2:

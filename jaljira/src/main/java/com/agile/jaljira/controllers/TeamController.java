@@ -1,6 +1,7 @@
 package com.agile.jaljira.controllers;
 
 import com.agile.jaljira.models.Team;
+import com.agile.jaljira.models.User;
 import com.agile.jaljira.services.TeamService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/teams")
@@ -31,10 +33,11 @@ public class TeamController {
      * Accessible by authenticated users
      */
     @GetMapping("/org/{orgId}")
-    public ResponseEntity<List<Team>> getTeamsByOrganization(@PathVariable UUID orgId) {
+    public ResponseEntity<List<Map<String, Object>>> getTeamsByOrganization(@PathVariable UUID orgId) {
         try {
             List<Team> teams = teamService.getTeamsByOrganization(orgId);
-            return ResponseEntity.ok(teams);
+            List<Map<String, Object>> teamDtos = teams.stream().map(this::teamToMap).collect(Collectors.toList());
+            return ResponseEntity.ok(teamDtos);
         } catch (Exception e) {
             logger.error("Error fetching teams for organization: {}", orgId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -135,5 +138,30 @@ public class TeamController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "error", "Internal server error: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Convert Team entity to a Map to avoid circular references
+     */
+    private Map<String, Object> teamToMap(Team team) {
+        User manager = team.getManager();
+        Map<String, Object> managerMap = null;
+        if (manager != null) {
+            managerMap = Map.of(
+                    "id", manager.getId().toString(),
+                    "email", manager.getEmail(),
+                    "firstName", manager.getFirstName() != null ? manager.getFirstName() : "",
+                    "lastName", manager.getLastName() != null ? manager.getLastName() : ""
+            );
+        }
+
+        return Map.of(
+                "id", team.getId().toString(),
+                "teamName", team.getTeamName(),
+                "description", team.getDescription() != null ? team.getDescription() : "",
+                "manager", managerMap != null ? managerMap : Map.of(),
+                "organization", team.getOrganization() != null ? 
+                    Map.of("id", team.getOrganization().getId().toString()) : Map.of()
+        );
     }
 }

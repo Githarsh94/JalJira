@@ -127,17 +127,17 @@ public class TeamService {
                 logger.warn("User {} is already a manager of team {}", managerEmail, existingTeam.get().getId());
                 return Map.of("success", false, "error", "This user is already a manager of another team");
             }
-            logger.info("Using existing user as manager: {}", managerEmail);
+            logger.info("Using existing user as manager: {}, isOnboarded={}", managerEmail, manager.isOnboarded());
         } else {
             // Create new pending manager user
             manager = new User();
             manager.setEmail(managerEmail);
             manager.setRole(Role.MANAGER);
-            manager.setOnboarded(false);
+            manager.setOnboarded(false);  // NEW managers must complete onboarding
             manager.setOrganization(organization);
             manager = userRepository.save(manager);
             isNewManager = true;
-            logger.info("Created new pending manager user: {}", managerEmail);
+            logger.info("Created new pending manager user: {}, isOnboarded=false", managerEmail);
         }
 
         // Assign manager to team

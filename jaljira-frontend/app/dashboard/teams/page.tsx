@@ -40,7 +40,7 @@ export default function TeamsPage() {
         try {
             const userData = await apiFetch<AuthUser>("/api/user/info");
             setUser(userData as any);
-            
+
             // Get organization ID from localStorage (set during onboarding)
             const orgId = localStorage.getItem("org_id");
             if (!orgId) {
@@ -48,7 +48,7 @@ export default function TeamsPage() {
                 setLoading(false);
                 return;
             }
-            
+
             const teamsData = await getTeamsByOrganization(orgId);
             setTeams(teamsData);
         } catch (err: any) {
@@ -286,7 +286,7 @@ export default function TeamsPage() {
 
                                         {/* Manager Info */}
                                         <div className="mb-4 p-3 bg-background/50 rounded-lg">
-                                            {team.manager ? (
+                                            {team.manager && team.manager.email ? (
                                                 <div>
                                                     <p className="text-xs text-muted-foreground mb-1">Manager</p>
                                                     <div className="flex items-center gap-2">

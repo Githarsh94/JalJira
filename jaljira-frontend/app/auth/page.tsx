@@ -2,6 +2,8 @@
 
 import { Github, Droplet } from "lucide-react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import teamCollaboration from "../assets/team-collaboration.png";
 import { authConfig } from "../lib/auth-config";
 
@@ -11,6 +13,16 @@ function startOAuth(provider: "google" | "github") {
 }
 
 export default function AuthPage() {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Preserve manager_invite parameter if present
+    const managerInvite = searchParams.get("manager_invite");
+    if (managerInvite === "true") {
+      console.log("Manager invite detected, storing in localStorage");
+      localStorage.setItem("manager_invite", "true");
+    }
+  }, [searchParams]);
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">
       {/* Header */}
