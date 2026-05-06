@@ -30,8 +30,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 const userData = await apiFetch<AuthUser>("/api/user/info");
                 setUser(userData);
                 // Store org_id and user info for use across pages
-                if ("organization" in userData && userData.organization) {
-                    localStorage.setItem("org_id", (userData.organization as any).id);
+                const orgId =
+                    (userData as any).organization_id ??
+                    (("organization" in userData && userData.organization)
+                        ? (userData.organization as any).id
+                        : null);
+
+                if (orgId != null) {
+                    localStorage.setItem("org_id", String(orgId));
                 }
             } catch (err) {
                 console.error("Failed to fetch user:", err);
