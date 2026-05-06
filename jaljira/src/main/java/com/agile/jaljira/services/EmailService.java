@@ -48,8 +48,9 @@ public class EmailService {
      * @param managerName Name of the manager (optional)
      * @param teamName Name of the team they're assigned to
      * @param organizationName Name of the organization
+     * @return true if email sent successfully, false if delivery failed
      */
-    public void sendManagerInvitation(String managerEmail, String managerName, String teamName, String organizationName) {
+    public boolean sendManagerInvitation(String managerEmail, String managerName, String teamName, String organizationName) {
         String loginUrl = baseUrl + "/auth?manager_invite=true";
         String subject = "You're invited to manage a team at " + organizationName;
         
@@ -68,21 +69,25 @@ public class EmailService {
             logger.info("========== EMAIL SENT SUCCESSFULLY ==========");
             logger.info("Manager invitation email sent to: {} for team: {} in org: {}", 
                 managerEmail, teamName, organizationName);
+            return true;
         } catch (MessagingException e) {
             logger.error("========== EMAIL FAILED - MESSAGING ERROR ==========");
             logger.error("To: {}", managerEmail);
             logger.error("Error: {}", e.getMessage());
             logger.error("Error Details:", e);
+            return false;
         } catch (UnsupportedEncodingException e) {
             logger.error("========== EMAIL FAILED - ENCODING ERROR ==========");
             logger.error("To: {}", managerEmail);
             logger.error("Error: {}", e.getMessage());
             logger.error("Error Details:", e);
+            return false;
         } catch (Exception e) {
             logger.error("========== EMAIL FAILED - UNKNOWN ERROR ==========");
             logger.error("To: {}", managerEmail);
             logger.error("Error: {}", e.getMessage());
             logger.error("Error Details:", e);
+            return false;
         }
     }
 
