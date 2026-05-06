@@ -43,7 +43,7 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground">
                         {user.role === "ADMIN"
                             ? "Manage your organization, teams, and members"
-                            : "Your sprint velocity is up by 12% this week. Keep the momentum."}
+                            : "Your sprint velocity is amazing this week. Keep the momentum."}
                     </p>
                 </div>
 
