@@ -285,4 +285,40 @@ public class TeamService {
 
     return response;
   }
+
+  /**
+   * Delete a team by ID
+   */
+  @Transactional
+  public Map<String, Object> deleteTeam(UUID teamId) {
+    Optional<Team> teamOpt = teamRepository.findById(teamId);
+    if (teamOpt.isEmpty()) {
+      logger.warn("Team not found: {}", teamId);
+      return Map.of("success", false, "error", "Team not found");
+    }
+
+    Team team = teamOpt.get();
+    String teamName = team.getTeamName();
+    
+    // Find all users in this team and clear their team reference
+    List<User> teamUsers = userRepository.findByTeamId(teamId);
+    for (User user : teamUsers) {
+      user.setTeam(null);
+      if (user.getRole() == Role.MANAGER) {
+        user.setRole(Role.MEMBER);
+        logger.info("Manager {} demoted to MEMBER after team deletion", user.getEmail());
+      }
+      userRepository.save(user);
+    }
+    
+    teamRepository.delete(team);
+    logger.info("Team deleted: id={}, name={}, affected_users={}", teamId, teamName, teamUsers.size());
+    
+    return Map.of(
+        "success", true,
+        "message", "Team deleted successfully",
+        "team_id", teamId.toString(),
+        "team_name", teamName
+    );
+  }
 }

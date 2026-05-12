@@ -1,7 +1,10 @@
 package com.agile.jaljira.controllers;
 
+import com.agile.jaljira.models.Organization;
+import com.agile.jaljira.models.Role;
 import com.agile.jaljira.models.Team;
 import com.agile.jaljira.models.User;
+import com.agile.jaljira.repositories.UserRepository;
 import com.agile.jaljira.services.TeamService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,64 +27,69 @@ public class TeamController {
   private static final Logger logger = LoggerFactory.getLogger(TeamController.class);
 
   private final TeamService teamService;
+  private final UserRepository userRepository;
 
-  public TeamController(TeamService teamService) {
+  public TeamController(TeamService teamService, UserRepository userRepository) {
     this.teamService = teamService;
+    this.userRepository = userRepository;
   }
 
   /**
-   * Get all teams for an organization
-   * Accessible by authenticated users
+   * Get teams for current user's organization
+   * - ADMIN: sees all teams in organization
+   * - MANAGER: sees only their own team
+   * - MEMBER: sees only their assigned team
    */
-  @GetMapping("/org/{orgId}")
-  public ResponseEntity<List<Map<String, Object>>> getTeamsByOrganization(@PathVariable UUID orgId) {
+  @GetMapping("/org")
+  public ResponseEntity<List<Map<String, Object>>> getTeamsByOrganization(Authentication auth) {
     try {
+      User user = userRepository.findByEmail(auth.getName())
+              .orElseThrow(() -> new IllegalArgumentException("User not found"));
+      UUID orgId = user.getOrganization().getId();
       List<Team> teams = teamService.getTeamsByOrganization(orgId);
+      
+      // Filter teams based on user role
+      if (user.getRole() != Role.ADMIN) {
+        // Managers and members only see their own team
+        teams = teams.stream()
+                .filter(team -> team.getManager() != null && team.getManager().getId().equals(user.getId()))
+                .collect(Collectors.toList());
+      }
+      
       List<Map<String, Object>> teamDtos = teams.stream().map(this::teamToMap).collect(Collectors.toList());
       return ResponseEntity.ok(teamDtos);
     } catch (Exception e) {
-      logger.error("Error fetching teams for organization: {}", orgId, e);
+      logger.error("Error fetching teams", e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
   }
 
   /**
    * Create a new team
-   * ADMIN only endpoint
-   * Request body should contain:
-   * {
-   *   "team_name": "string",
-   *   "description": "string",
-   *   "org_id": "uuid"
-   * }
+   * ADMIN only endpoint - team created in admin's organization
    */
   @PostMapping
   @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<Map<String, Object>> createTeam(@RequestBody Map<String, String> request, Authentication auth) {
     try {
+      User admin = userRepository.findByEmail(auth.getName())
+              .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+      
+      Organization org = admin.getOrganization();
+      if (org == null) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("success", false, "error", "Admin must belong to an organization"));
+      }
+
       String teamName = request.get("team_name");
       String description = request.get("description");
-      String orgIdStr = request.get("org_id");
 
       if (teamName == null || teamName.isBlank()) {
         return ResponseEntity.badRequest()
             .body(Map.of("success", false, "error", "Team name is required"));
       }
 
-      if (orgIdStr == null || orgIdStr.isBlank()) {
-        return ResponseEntity.badRequest()
-            .body(Map.of("success", false, "error", "Organization ID is required"));
-      }
-
-      UUID organizationId;
-      try {
-        organizationId = UUID.fromString(orgIdStr);
-      } catch (IllegalArgumentException e) {
-        return ResponseEntity.badRequest()
-            .body(Map.of("success", false, "error", "Invalid organization ID format"));
-      }
-
-      Map<String, Object> result = teamService.createTeam(organizationId, teamName, description != null ? description : "");
+      Map<String, Object> result = teamService.createTeam(org.getId(), teamName, description != null ? description : "");
 
       if ((boolean) result.get("success")) {
         logger.info("Team created successfully by admin: {}", auth.getName());
@@ -176,26 +185,70 @@ public class TeamController {
   }
 
   /**
+   * Delete a team
+   * ADMIN only endpoint
+   */
+  @DeleteMapping("/{teamId}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public ResponseEntity<Map<String, Object>> deleteTeam(@PathVariable UUID teamId, Authentication auth) {
+    try {
+      User admin = userRepository.findByEmail(auth.getName())
+              .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+      
+      // Verify team belongs to admin's organization
+      Optional<Team> teamOpt = teamService.getTeamById(teamId);
+      if (teamOpt.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "error", "Team not found"));
+      }
+      
+      Team team = teamOpt.get();
+      if (!team.getOrganization().getId().equals(admin.getOrganization().getId())) {
+        logger.warn("Unauthorized team deletion attempt by admin: {}", auth.getName());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "error", "Cannot delete team from another organization"));
+      }
+      
+      Map<String, Object> result = teamService.deleteTeam(teamId);
+      if ((boolean) result.get("success")) {
+        logger.info("Team deleted by admin: {}", auth.getName());
+        return ResponseEntity.ok(result);
+      } else {
+        return ResponseEntity.badRequest().body(result);
+      }
+    } catch (Exception e) {
+      logger.error("Error deleting team", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("success", false, "error", "Internal server error"));
+    }
+  }
+
+  /**
    * Convert Team entity to a Map to avoid circular references
    */
   private Map<String, Object> teamToMap(Team team) {
+    Map<String, Object> result = new java.util.LinkedHashMap<>();
+    result.put("id", team.getId().toString());
+    result.put("teamName", team.getTeamName());
+    result.put("description", team.getDescription() != null ? team.getDescription() : "");
+
     User manager = team.getManager();
-    Map<String, Object> managerMap = null;
     if (manager != null) {
-      managerMap = Map.of(
+      result.put("manager", Map.of(
           "id", manager.getId().toString(),
           "email", manager.getEmail(),
           "firstName", manager.getFirstName() != null ? manager.getFirstName() : "",
-          "lastName", manager.getLastName() != null ? manager.getLastName() : "");
+          "lastName", manager.getLastName() != null ? manager.getLastName() : ""));
+    } else {
+      result.put("manager", null);
     }
 
-    return Map.of(
-        "id", team.getId().toString(),
-        "teamName", team.getTeamName(),
-        "description", team.getDescription() != null ? team.getDescription() : "",
-        "manager", managerMap != null ? managerMap : Map.of(),
-        "organization", team.getOrganization() != null
-            ? Map.of("id", team.getOrganization().getId().toString())
-            : Map.of());
+    if (team.getOrganization() != null) {
+      result.put("organization", Map.of("id", team.getOrganization().getId().toString()));
+    } else {
+      result.put("organization", null);
+    }
+
+    return result;
   }
 }

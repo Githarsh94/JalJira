@@ -7,6 +7,7 @@ import {
   createTeam,
   assignManagerToTeam,
   changeManagerToTeam,
+  deleteTeam,
   Team,
   apiFetch,
   type AuthUser,
@@ -20,6 +21,7 @@ import {
   Users,
   Target,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
 interface UserData {
@@ -58,14 +60,7 @@ export default function TeamsPage() {
       const userData = await apiFetch<AuthUser>("/api/user/info");
       setUser(userData as any);
 
-      const orgId = localStorage.getItem("org_id");
-      if (!orgId) {
-        setError("Organization not found. Please complete onboarding first.");
-        setLoading(false);
-        return;
-      }
-
-      const teamsData = await getTeamsByOrganization(orgId);
+      const teamsData = await getTeamsByOrganization();
       setTeams(teamsData);
     } catch (err: any) {
       console.error("Error fetching data:", err);
@@ -88,10 +83,7 @@ export default function TeamsPage() {
     setError(null);
 
     try {
-      const orgId = localStorage.getItem("org_id");
-      if (!orgId) throw new Error("Organization not found");
-
-      const result = await createTeam(orgId, formData.teamName, formData.description);
+      const result = await createTeam(formData.teamName, formData.description);
       if (result.success) {
         setSuccess(`Team "${result.team_name}" created successfully!`);
         setFormData({ teamName: "", description: "" });
@@ -129,19 +121,19 @@ export default function TeamsPage() {
         const action = hasManager
           ? "Manager changed to"
           : (result as any).is_new_manager
-          ? "Invitation sent to"
-          : "Manager assigned to";
+            ? "Invitation sent to"
+            : "Manager assigned to";
         const email = hasManager
           ? (result as any).new_manager_email
           : (result as any).manager_email;
-        
+
         // Display warning if email delivery failed
         if ((result as any).warning) {
           setSuccess(`${action} ${email}! ⚠️ ${(result as any).warning}`);
         } else {
           setSuccess(`${action} ${email}!`);
         }
-        
+
         setManagerEmail("");
         setShowAssignModal(false);
         await fetchUserAndTeams();
@@ -151,6 +143,30 @@ export default function TeamsPage() {
       }
     } catch (err: any) {
       setError(err.message || "Failed to assign manager");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${teamName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      const result = await deleteTeam(teamId);
+      if (result.success) {
+        setSuccess(`Team "${result.team_name}" deleted successfully!`);
+        await fetchUserAndTeams();
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(result.error || "Failed to delete team");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to delete team");
     } finally {
       setIsCreating(false);
     }
@@ -271,14 +287,14 @@ export default function TeamsPage() {
 
               {/* Alerts */}
               {error && (
-                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-gap-2">
+                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-destructive ml-3">{error}</p>
                 </div>
               )}
 
               {success && (
-                <div className="mb-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-gap-2">
+                <div className="mb-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-green-500 ml-3">{success}</p>
                 </div>
@@ -355,20 +371,29 @@ export default function TeamsPage() {
                       )}
                     </div>
 
-                    {/* Action Button */}
+                    {/* Action Buttons */}
                     {isAdmin && (
-                      <button
-                        onClick={() => {
-                          setSelectedTeam(team);
-                          setShowAssignModal(true);
-                          setError(null);
-                        }}
-                        disabled={isCreating}
-                        className="w-full px-3 py-2 text-sm font-medium bg-primary/10 text-primary rounded-lg hover:bg-primary/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Mail className="w-4 h-4" />
-                        {team.manager ? "Change Manager" : "Assign Manager"}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedTeam(team);
+                            setShowAssignModal(true);
+                            setError(null);
+                          }}
+                          disabled={isCreating}
+                          className="flex-1 px-3 py-2 text-sm font-medium bg-primary/10 text-primary rounded-lg hover:bg-primary/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Mail className="w-4 h-4" />
+                          {team.manager ? "Change Manager" : "Assign Manager"}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTeam(team.id, team.teamName)}
+                          disabled={isCreating}
+                          className="px-3 py-2 text-sm font-medium bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}

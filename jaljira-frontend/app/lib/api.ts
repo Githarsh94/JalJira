@@ -80,6 +80,7 @@ export interface AuthUser {
   lastName: string;
   role: string;
   isOnboarded: boolean;
+  organization_id?: string | null;
 }
 
 export function logout(): void {
@@ -151,26 +152,24 @@ export interface Team {
     email: string;
     firstName: string;
     lastName: string;
-  };
+  } | null;
   organization?: {
     id: string;
-    organisationName: string;
-  };
+    organisationName?: string;
+  } | null;
 }
 
-export async function getTeamsByOrganization(organizationId: string): Promise<Team[]> {
-  return apiFetch<Team[]>(`/api/teams/org/${organizationId}`);
+export async function getTeamsByOrganization(): Promise<Team[]> {
+  return apiFetch<Team[]>("/api/teams/org");
 }
 
 export async function createTeam(
-  organizationId: string,
   teamName: string,
   description: string
 ): Promise<{ success: boolean; message: string; team_id?: string; team_name?: string; error?: string }> {
   return apiFetch("/api/teams", {
     method: "POST",
     body: JSON.stringify({
-      org_id: organizationId,
       team_name: teamName,
       description,
     }),
@@ -186,6 +185,14 @@ export async function assignManagerToTeam(
     body: JSON.stringify({
       manager_email: managerEmail,
     }),
+  });
+}
+
+export async function deleteTeam(
+  teamId: string
+): Promise<{ success: boolean; message: string; team_id?: string; team_name?: string; error?: string }> {
+  return apiFetch(`/api/teams/${teamId}`, {
+    method: "DELETE",
   });
 }
 
