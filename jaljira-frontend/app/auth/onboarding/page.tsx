@@ -204,6 +204,8 @@ export default function OnboardingPage() {
             );
 
             if (sprintResult.success) {
+                // Store organization ID for later use
+                localStorage.setItem("org_id", onboardingResult.organization_id);
                 localStorage.removeItem(USER_DATA_KEY);
                 router.push("/dashboard");
             } else {

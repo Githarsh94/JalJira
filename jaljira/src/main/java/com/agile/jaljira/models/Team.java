@@ -13,6 +13,9 @@ public class Team {
     
     @Column(name = "team_name", nullable = false)
     private String teamName;
+
+    @Column(name = "description")
+    private String description;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
@@ -27,6 +30,12 @@ public class Team {
     
     public Team(String teamName) {
         this.teamName = teamName;
+    }
+
+    public Team(String teamName, String description, Organization organization) {
+        this.teamName = teamName;
+        this.description = description;
+        this.organization = organization;
     }
     
     // Getters and Setters
@@ -44,6 +53,14 @@ public class Team {
     
     public void setTeamName(String teamName) {
         this.teamName = teamName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
     
     public User getManager() {
