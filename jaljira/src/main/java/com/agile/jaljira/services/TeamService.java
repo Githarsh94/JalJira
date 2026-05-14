@@ -287,6 +287,47 @@ public class TeamService {
   }
 
   /**
+   * Assign members to a team by email addresses
+   * Skips emails that already exist in the team, creates new users for new emails
+   */
+  @Transactional
+  public List<User> assignMembersToTeam(UUID teamId, List<String> emails) {
+    Optional<Team> teamOpt = teamRepository.findById(teamId);
+    if (teamOpt.isEmpty()) {
+      logger.warn("Team not found: {}", teamId);
+      return List.of();
+    }
+
+    Team team = teamOpt.get();
+    List<User> newUsers = new java.util.ArrayList<>();
+
+    for (String email : emails) {
+      // Check if user already exists with this email + teamId combination
+      Optional<User> existingUser = userRepository.findByEmailAndTeam_Id(email, teamId);
+      
+      if (existingUser.isPresent()) {
+        logger.debug("User with email {} already exists in team {}, skipping", email, teamId);
+        continue;
+      }
+
+      // Create new user
+      User newUser = new User();
+      newUser.setEmail(email);
+      newUser.setRole(Role.MEMBER);
+      newUser.setTeam(team);
+      newUser.setOrganization(team.getOrganization());
+      newUser.setOnboarded(false);
+
+      User savedUser = userRepository.save(newUser);
+      newUsers.add(savedUser);
+      logger.info("New member assigned to team {}: email={}, user_id={}", teamId, email, savedUser.getId());
+    }
+
+    logger.info("Assigned {} new members to team {}", newUsers.size(), teamId);
+    return newUsers;
+  }
+
+  /**
    * Delete a team by ID
    */
   @Transactional

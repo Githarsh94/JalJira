@@ -19,14 +19,19 @@ export function isAuthenticated(): boolean {
   return !!getToken();
 }
 
+type ApiFetchOptions = RequestInit & {
+  suppressAuthRedirect?: boolean;
+};
+
 export async function apiFetch<T = unknown>(
   path: string,
-  options: RequestInit = {}
+  options: ApiFetchOptions = {}
 ): Promise<T> {
+  const { suppressAuthRedirect = false, ...requestOptions } = options;
   const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
+    ...(requestOptions.headers as Record<string, string>),
   };
 
   if (token) {
@@ -34,13 +39,15 @@ export async function apiFetch<T = unknown>(
   }
 
   const res = await fetch(`${authConfig.apiUrl}${path}`, {
-    ...options,
+    ...requestOptions,
     headers,
   });
 
   if (res.status === 401) {
-    removeToken();
-    window.location.href = "/auth";
+    if (!suppressAuthRedirect) {
+      removeToken();
+      window.location.href = "/auth";
+    }
     throw new Error("Unauthorized");
   }
 
@@ -142,6 +149,10 @@ export async function createSprint(
   });
 }
 
+export async function getSprintsByOrganization(): Promise<{ id: string; start: string; end: string; templateName?: string; description?: string }[]> {
+  return apiFetch("/api/sprints/org");
+}
+
 // Team Management APIs
 export interface Team {
   id: string;
@@ -152,7 +163,17 @@ export interface Team {
     email: string;
     firstName: string;
     lastName: string;
+    role?: string;
+    onboarded?: boolean;
   } | null;
+  members?: Array<{
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    onboarded: boolean;
+  }>;
   organization?: {
     id: string;
     organisationName?: string;
@@ -212,6 +233,106 @@ export async function changeManagerToTeam(
     method: "POST",
     body: JSON.stringify({
       manager_email: managerEmail,
+    }),
+  });
+}
+
+// Manager-only APIs for Task Status and Epics
+
+export interface TaskStatus {
+  id: string;
+  statusType: string;
+  description?: string;
+  createdAt?: string;
+}
+
+export interface Epic {
+  id: string;
+  title: string;
+  description?: string;
+  typeId: string;
+  sprintId: string;
+  assignedTo: {
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  teamId: string;
+  teamName: string;
+  createdAt: string;
+}
+
+export async function createTaskStatus(
+  teamId: string,
+  statusType: string,
+  description: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  taskStatusId?: string;
+  error?: string;
+}> {
+  return apiFetch(`/api/manager/teams/${teamId}/task-status`, {
+    method: "POST",
+    body: JSON.stringify({
+      status_type: statusType,
+      description: description,
+    }),
+  });
+}
+
+export async function createEpic(
+  teamId: string,
+  title: string,
+  description: string,
+  sprintId?: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  epicId?: string;
+  error?: string;
+}> {
+  const body: any = {
+    title: title,
+    description: description,
+  };
+  
+  // Only include sprint_id if provided
+  if (sprintId) {
+    body.sprint_id = sprintId;
+  }
+  
+  return apiFetch(`/api/manager/teams/${teamId}/epics`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+// Get all epics for the organization
+export async function getOrganizationEpics(): Promise<Epic[]> {
+  return apiFetch<Epic[]>("/api/user/epics", {
+    method: "GET",
+  });
+}
+
+export async function getEpicById(epicId: string): Promise<Epic> {
+  return apiFetch<Epic>(`/api/user/epics/${epicId}`, {
+    method: "GET",
+  });
+}
+
+export async function updateEpic(
+  epicId: string,
+  title: string,
+  description?: string
+): Promise<{ success: boolean; message?: string; epicId?: string; error?: string }> {
+  return apiFetch(`/api/user/epics/${epicId}/update`, {
+    method: "POST",
+    suppressAuthRedirect: true,
+    body: JSON.stringify({
+      title,
+      description: description ?? "",
     }),
   });
 }

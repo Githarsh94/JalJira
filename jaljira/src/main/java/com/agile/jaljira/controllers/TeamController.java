@@ -1,11 +1,14 @@
 package com.agile.jaljira.controllers;
 
+import com.agile.jaljira.dtos.AssignMembersRequestDTO;
 import com.agile.jaljira.models.Organization;
 import com.agile.jaljira.models.Role;
 import com.agile.jaljira.models.Team;
 import com.agile.jaljira.models.User;
 import com.agile.jaljira.repositories.UserRepository;
+import com.agile.jaljira.services.EmailService;
 import com.agile.jaljira.services.TeamService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -28,17 +31,18 @@ public class TeamController {
 
   private final TeamService teamService;
   private final UserRepository userRepository;
+  private final EmailService emailService;
 
-  public TeamController(TeamService teamService, UserRepository userRepository) {
+  public TeamController(TeamService teamService, UserRepository userRepository, EmailService emailService) {
     this.teamService = teamService;
     this.userRepository = userRepository;
+    this.emailService = emailService;
   }
 
   /**
    * Get teams for current user's organization
-   * - ADMIN: sees all teams in organization
-   * - MANAGER: sees only their own team
-   * - MEMBER: sees only their assigned team
+   * All authenticated users can see teams in their organization and their members
+   * Permission checks for modifications (create, delete, assign) are handled at endpoint level
    */
   @GetMapping("/org")
   public ResponseEntity<List<Map<String, Object>>> getTeamsByOrganization(Authentication auth) {
@@ -48,13 +52,8 @@ public class TeamController {
       UUID orgId = user.getOrganization().getId();
       List<Team> teams = teamService.getTeamsByOrganization(orgId);
       
-      // Filter teams based on user role
-      if (user.getRole() != Role.ADMIN) {
-        // Managers and members only see their own team
-        teams = teams.stream()
-                .filter(team -> team.getManager() != null && team.getManager().getId().equals(user.getId()))
-                .collect(Collectors.toList());
-      }
+      logger.info("User {} (role: {}) fetching {} teams for organization {}", 
+          user.getEmail(), user.getRole(), teams.size(), orgId);
       
       List<Map<String, Object>> teamDtos = teams.stream().map(this::teamToMap).collect(Collectors.toList());
       return ResponseEntity.ok(teamDtos);
@@ -224,6 +223,112 @@ public class TeamController {
   }
 
   /**
+   * Assign multiple members to a team by email addresses
+   * MANAGER only - manager can add members to their team
+   */
+  @PostMapping("/{teamId}/assign-members")
+  @PreAuthorize("hasRole('MANAGER')")
+  public ResponseEntity<Map<String, Object>> assignMembersToTeam(
+      @PathVariable UUID teamId,
+      @Valid @RequestBody AssignMembersRequestDTO request,
+      Authentication auth) {
+    try {
+      // Validate team exists
+      Optional<Team> teamOpt = teamService.getTeamById(teamId);
+      if (teamOpt.isEmpty()) {
+        logger.warn("Team not found: {}", teamId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("success", false, "error", "Team not found"));
+      }
+
+      Team team = teamOpt.get();
+      User currentUser = userRepository.findByEmail(auth.getName())
+          .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+      // Verify user is the manager of the team
+      if (team.getManager() == null || !team.getManager().getId().equals(currentUser.getId())) {
+        logger.warn("User {} attempted to assign members to team {} they don't manage", auth.getName(), teamId);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(Map.of("success", false, "error", "You can only manage your own team"));
+      }
+
+      // Assign members to team
+      List<User> newUsers = teamService.assignMembersToTeam(teamId, request.getEmails());
+
+      // Send invitation emails to newly added members
+      if (!newUsers.isEmpty()) {
+        emailService.sendTeamInviteEmails(newUsers, teamId);
+      }
+
+      logger.info("Successfully assigned {} members to team {} by manager {}", 
+          newUsers.size(), teamId, auth.getName());
+      return ResponseEntity.ok(Map.of(
+          "success", true,
+          "message", newUsers.size() + " member(s) invited successfully",
+          "addedMembers", newUsers.size()
+      ));
+
+    } catch (IllegalArgumentException e) {
+      logger.error("Validation error while assigning members: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("success", false, "error", e.getMessage()));
+    } catch (Exception e) {
+      logger.error("Error assigning members to team {}: {}", teamId, e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("success", false, "error", "Internal server error"));
+    }
+  }
+
+  /**
+   * Assign One member to a team
+   */
+  @PostMapping("/{teamId}/assign-member")
+  @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+  public ResponseEntity<Map<String, Object>> assignMemberToTeam(
+      @PathVariable UUID teamId,
+      @RequestBody Map<String, String> request,
+      Authentication auth) {
+    try {
+      String memberEmail = request.get("email");
+      if (memberEmail == null || memberEmail.isBlank()) {
+        return ResponseEntity.badRequest()
+            .body(Map.of("success", false, "error", "Email is required"));
+      }
+
+      Optional<Team> teamOpt = teamService.getTeamById(teamId);
+      if (teamOpt.isEmpty()) {
+        logger.warn("Team not found: {}", teamId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("success", false, "error", "Team not found"));
+      }
+
+      Team team = teamOpt.get();
+      List<User> newUsers = teamService.assignMembersToTeam(teamId, List.of(memberEmail));
+
+      if (newUsers.isEmpty()) {
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "Member already exists in team",
+            "addedMembers", 0
+        ));
+      }
+
+      emailService.sendTeamInviteEmails(newUsers, teamId);
+      logger.info("Member {} assigned to team {} by {}", memberEmail, teamId, auth.getName());
+      return ResponseEntity.ok(Map.of(
+          "success", true,
+          "message", "Member invited successfully",
+          "addedMembers", 1
+      ));
+
+    } catch (Exception e) {
+      logger.error("Error assigning member to team {}: {}", teamId, e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("success", false, "error", "Internal server error"));
+    }
+  }
+  
+  /**
    * Convert Team entity to a Map to avoid circular references
    */
   private Map<String, Object> teamToMap(Team team) {
@@ -238,7 +343,9 @@ public class TeamController {
           "id", manager.getId().toString(),
           "email", manager.getEmail(),
           "firstName", manager.getFirstName() != null ? manager.getFirstName() : "",
-          "lastName", manager.getLastName() != null ? manager.getLastName() : ""));
+          "lastName", manager.getLastName() != null ? manager.getLastName() : "",
+          "role", manager.getRole() != null ? manager.getRole().name() : "MANAGER",
+          "onboarded", manager.isOnboarded()));
     } else {
       result.put("manager", null);
     }
@@ -249,6 +356,27 @@ public class TeamController {
       result.put("organization", null);
     }
 
+    // Add team members (all users assigned to team, onboarded or not)
+    List<User> members = userRepository.findAllByTeam_Id(team.getId());
+    logger.info("Team {} has {} total members before filtering", team.getTeamName(), members.size());
+    
+    List<Map<String, Object>> memberList = members.stream()
+        .map(user -> {
+          Map<String, Object> memberMap = new java.util.LinkedHashMap<>();
+          memberMap.put("id", user.getId().toString());
+          memberMap.put("email", user.getEmail());
+          memberMap.put("firstName", user.getFirstName() != null ? user.getFirstName() : "");
+          memberMap.put("lastName", user.getLastName() != null ? user.getLastName() : "");
+          memberMap.put("role", user.getRole().name());
+          memberMap.put("onboarded", user.isOnboarded());
+          return memberMap;
+        })
+        .collect(Collectors.toList());
+    
+    logger.info("Team {} returning {} members in response", team.getTeamName(), memberList.size());
+    result.put("members", memberList);
+
     return result;
   }
+
 }

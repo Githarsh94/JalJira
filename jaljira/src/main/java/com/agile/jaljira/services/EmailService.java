@@ -1,5 +1,6 @@
 package com.agile.jaljira.services;
 
+import com.agile.jaljira.models.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.io.UnsupportedEncodingException;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class EmailService {
@@ -157,6 +160,92 @@ public class EmailService {
             "</body>" +
             "</html>",
             name, teamName, organizationName, loginUrl
+        );
+    }
+
+    /**
+     * Send team invitation emails to newly assigned members
+     * @param newUsers List of newly created users to send invitations to
+     * @param teamId The team ID they are being added to
+     */
+    public void sendTeamInviteEmails(List<User> newUsers, UUID teamId) {
+        for (User user : newUsers) {
+            try {
+                String loginUrl = baseUrl + "/auth?team_invite=true&team_id=" + teamId;
+                String subject = "You've been invited to join a team";
+                String plainTextBody = buildTeamInviteEmailBody(user.getEmail(), teamId);
+
+                logger.info("========== EMAIL SENDING ATTEMPT ==========");
+                logger.info("To: {}", user.getEmail());
+                logger.info("From: {} <{}>", fromName, fromEmail);
+                logger.info("Subject: {}", subject);
+                logger.info("Mail Server: {}:{} (auth user: {})", mailHost, mailPort, mailUsername);
+                logger.info("Sending plain text email...");
+
+                sendPlainTextEmail(user.getEmail(), subject, plainTextBody);
+
+                logger.info("========== EMAIL SENT SUCCESSFULLY ==========");
+                logger.info("Team invitation email sent to: {} for team: {}", user.getEmail(), teamId);
+            } catch (MessagingException e) {
+                logger.error("========== EMAIL FAILED - MESSAGING ERROR ==========");
+                logger.error("To: {}", user.getEmail());
+                logger.error("Error: {}", e.getMessage());
+                logger.error("Error Details:", e);
+            } catch (UnsupportedEncodingException e) {
+                logger.error("========== EMAIL FAILED - ENCODING ERROR ==========");
+                logger.error("To: {}", user.getEmail());
+                logger.error("Error: {}", e.getMessage());
+                logger.error("Error Details:", e);
+            } catch (Exception e) {
+                logger.error("========== EMAIL FAILED - UNKNOWN ERROR ==========");
+                logger.error("To: {}", user.getEmail());
+                logger.error("Error: {}", e.getMessage());
+                logger.error("Error Details:", e);
+            }
+        }
+    }
+
+    /**
+     * Send plain text email
+     */
+    private void sendPlainTextEmail(String to, String subject, String textContent) throws MessagingException, UnsupportedEncodingException {
+        logger.info("Creating MIME message for plain text...");
+        MimeMessage message = mailSender.createMimeMessage();
+        logger.info("Message created, setting up helper...");
+
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        logger.info("Setting from: {} {}", fromEmail, fromName);
+        helper.setFrom(fromEmail, fromName);
+
+        logger.info("Setting to: {}", to);
+        helper.setTo(to);
+
+        logger.info("Setting subject: {}", subject);
+        helper.setSubject(subject);
+
+        logger.info("Setting text content (HTML: false)...");
+        helper.setText(textContent, false);  // false = plaintext
+
+        logger.info("Sending message via JavaMailSender...");
+        mailSender.send(message);
+        logger.info("Message sent successfully!");
+    }
+
+    /**
+     * Build plain text body for team invitation email
+     */
+    private String buildTeamInviteEmailBody(String memberEmail, UUID teamId) {
+        return String.format(
+            "Hello,\n\n" +
+            "You have been invited to join a team in Jaljira, an agile project management platform.\n\n" +
+            "To complete your onboarding and start collaborating, please log in to Jaljira at:\n" +
+            "%s/auth?team_invite=true&team_id=%s\n\n" +
+            "Once you log in, your onboarding will be automatically marked as complete.\n\n" +
+            "If you did not expect this invitation or have any questions, please contact your team manager.\n\n" +
+            "Best regards,\n" +
+            "Jaljira Team",
+            baseUrl, teamId
         );
     }
 }

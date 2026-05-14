@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AssignMembersModal from "../../components/AssignMembersModal";
+import CreateTaskStatusModal from "../../components/CreateTaskStatusModal";
+import CreateEpicModal from "../../components/CreateEpicModal";
 import {
   getTeamsByOrganization,
   createTeam,
@@ -33,6 +36,17 @@ interface UserData {
   organizationId?: string;
 }
 
+interface OrgUserRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  teamId: string;
+  teamName: string;
+  onboarded: boolean;
+}
+
 export default function TeamsPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
@@ -40,9 +54,17 @@ export default function TeamsPage() {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedMembersTeam, setSelectedMembersTeam] = useState<Team | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showTaskStatusModal, setShowTaskStatusModal] = useState(false);
+  const [showEpicModal, setShowEpicModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [adminNameFilter, setAdminNameFilter] = useState("");
+  const [adminEmailFilter, setAdminEmailFilter] = useState("");
+  const [adminRoleFilter, setAdminRoleFilter] = useState("all");
+  const [adminTeamFilter, setAdminTeamFilter] = useState("all");
 
   const [formData, setFormData] = useState({
     teamName: "",
@@ -173,6 +195,64 @@ export default function TeamsPage() {
   };
 
   const isAdmin = user?.role === "ADMIN";
+  const visibleTeams = isAdmin
+    ? teams
+    : teams.filter((team) => {
+        const managerMatches = team.manager?.id === user?.id;
+        const memberMatches = team.members?.some((member) => member.id === user?.id);
+        return managerMatches || memberMatches;
+      });
+
+  const adminUsers: OrgUserRow[] = Array.from(
+    new Map(
+      teams.flatMap((team) => {
+        const rows: OrgUserRow[] = [];
+
+        if (team.manager) {
+          rows.push({
+            id: team.manager.id,
+            firstName: team.manager.firstName || "",
+            lastName: team.manager.lastName || "",
+            email: team.manager.email,
+            role: team.manager.role || "MANAGER",
+            teamId: team.id,
+            teamName: team.teamName,
+            onboarded: team.manager.onboarded ?? true,
+          });
+        }
+
+        (team.members || [])
+          .filter((member) => member.role === "MEMBER")
+          .forEach((member) => {
+            rows.push({
+              id: member.id,
+              firstName: member.firstName || "",
+              lastName: member.lastName || "",
+              email: member.email,
+              role: member.role,
+              teamId: team.id,
+              teamName: team.teamName,
+              onboarded: member.onboarded,
+            });
+          });
+
+        return rows.map((row) => [row.id, row] as const);
+      })
+    ).values()
+  );
+
+  const filteredAdminUsers = adminUsers.filter((row) => {
+    const fullName = `${row.firstName} ${row.lastName}`.trim().toLowerCase();
+    const nameMatches =
+      adminNameFilter.trim() === "" ||
+      fullName.includes(adminNameFilter.trim().toLowerCase());
+    const emailMatches =
+      adminEmailFilter.trim() === "" ||
+      row.email.toLowerCase().includes(adminEmailFilter.trim().toLowerCase());
+    const roleMatches = adminRoleFilter === "all" || row.role === adminRoleFilter;
+    const teamMatches = adminTeamFilter === "all" || row.teamId === adminTeamFilter;
+    return nameMatches && emailMatches && roleMatches && teamMatches;
+  });
 
   if (loading) {
     return (
@@ -194,7 +274,7 @@ export default function TeamsPage() {
                 Team Management
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Manage teams and assign managers to your organization
+                View teams, members, and manage team assignments
               </p>
             </div>
           </div>
@@ -204,7 +284,7 @@ export default function TeamsPage() {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Create Team Form - Left Side */}
+          {/* Create Team Form - Left Side (Admin Only) */}
           {isAdmin && (
             <div className="lg:col-span-1">
               <div className="bg-card border border-border rounded-lg p-6 sticky top-20">
@@ -275,13 +355,13 @@ export default function TeamsPage() {
             </div>
           )}
 
-          {/* Teams Roster - Right Side */}
+          {/* Teams Roster - Right Side (Visible to All) */}
           <div className={isAdmin ? "lg:col-span-2" : "lg:col-span-3"}>
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-4">
                 <Target className="w-5 h-5 text-primary" />
                 <h2 className="text-lg font-semibold text-foreground">
-                  Active Teams Roster
+                  {isAdmin ? "Organization Users" : "Active Teams Roster"}
                 </h2>
               </div>
 
@@ -301,10 +381,123 @@ export default function TeamsPage() {
               )}
             </div>
 
-            {teams.length === 0 ? (
+            {isAdmin ? (
+              <>
+                <div className="mb-6 bg-card border border-border rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Name
+                      </label>
+                      <input
+                        type="text"
+                        value={adminNameFilter}
+                        onChange={(e) => setAdminNameFilter(e.target.value)}
+                        placeholder="Search by name or email"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Email
+                      </label>
+                      <input
+                        type="text"
+                        value={adminEmailFilter}
+                        onChange={(e) => setAdminEmailFilter(e.target.value)}
+                        placeholder="Search by email"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Role
+                      </label>
+                      <select
+                        value={adminRoleFilter}
+                        onChange={(e) => setAdminRoleFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="all">All Roles</option>
+                        <option value="MANAGER">MANAGER</option>
+                        <option value="MEMBER">MEMBER</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Team Name
+                      </label>
+                      <select
+                        value={adminTeamFilter}
+                        onChange={(e) => setAdminTeamFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="all">All Teams</option>
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.teamName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {filteredAdminUsers.length} user{filteredAdminUsers.length !== 1 ? "s" : ""}
+                  </div>
+                </div>
+
+                {filteredAdminUsers.length === 0 ? (
+                  <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">
+                    <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground">No users match the current filters</p>
+                  </div>
+                ) : (
+                  <div className="bg-card border border-border rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-background/60 border-b border-border">
+                          <tr>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Name</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Email</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Role</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Team</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredAdminUsers.map((row) => (
+                            <tr key={`${row.id}-${row.teamId}`} className="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-foreground">
+                                  {row.firstName} {row.lastName}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">{row.email}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-1 text-xs font-medium rounded bg-primary/10 text-primary">
+                                  {row.role}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-foreground">{row.teamName}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                  row.onboarded ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"
+                                }`}>
+                                  {row.onboarded ? "Onboarded" : "Pending"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : visibleTeams.length === 0 ? (
               <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">
                 <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">No teams created yet</p>
+                <p className="text-muted-foreground">No teams available</p>
                 {isAdmin && (
                   <p className="text-sm text-muted-foreground mt-1">
                     Create your first team using the form on the left
@@ -313,7 +506,7 @@ export default function TeamsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {teams.map((team) => (
+                {visibleTeams.map((team) => (
                   <div
                     key={team.id}
                     className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors"
@@ -366,14 +559,14 @@ export default function TeamsPage() {
                       ) : (
                         <div className="text-sm text-muted-foreground">
                           <p className="text-xs mb-1">No manager assigned</p>
-                          <p>Click the button below to assign one</p>
                         </div>
                       )}
                     </div>
 
                     {/* Action Buttons */}
-                    {isAdmin && (
-                      <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      {/* Admin Only: Assign/Change Manager */}
+                      {isAdmin && (
                         <button
                           onClick={() => {
                             setSelectedTeam(team);
@@ -381,11 +574,31 @@ export default function TeamsPage() {
                             setError(null);
                           }}
                           disabled={isCreating}
-                          className="flex-1 px-3 py-2 text-sm font-medium bg-primary/10 text-primary rounded-lg hover:bg-primary/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                          className="flex-1 min-w-fit px-3 py-2 text-sm font-medium bg-primary/10 text-primary rounded-lg hover:bg-primary/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                         >
                           <Mail className="w-4 h-4" />
                           {team.manager ? "Change Manager" : "Assign Manager"}
                         </button>
+                      )}
+
+                      {/* Admin or Manager of Team: Add Members */}
+                      {(isAdmin || (user?.role === "MANAGER" && team.manager?.id === user?.id)) && (
+                        <button
+                          onClick={() => {
+                            setSelectedMembersTeam(team);
+                            setShowMembersModal(true);
+                            setError(null);
+                          }}
+                          disabled={isCreating}
+                          className="flex-1 min-w-fit px-3 py-2 text-sm font-medium bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Users className="w-4 h-4" />
+                          Add Members
+                        </button>
+                      )}
+
+                      {/* Admin Only: Delete Team */}
+                      {isAdmin && (
                         <button
                           onClick={() => handleDeleteTeam(team.id, team.teamName)}
                           disabled={isCreating}
@@ -393,11 +606,136 @@ export default function TeamsPage() {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                      </div>
-                    )}
+                      )}
+
+                      {/* Manager Only: Create Task Status */}
+                      {(isAdmin || (user?.role === "MANAGER" && team.manager?.id === user?.id)) && (
+                        <button
+                          onClick={() => {
+                            setSelectedTeam(team);
+                            setShowTaskStatusModal(true);
+                            setError(null);
+                          }}
+                          disabled={isCreating}
+                          className="flex-1 min-w-fit px-3 py-2 text-sm font-medium bg-purple-500/10 text-purple-500 rounded-lg hover:bg-purple-500/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Task Status
+                        </button>
+                      )}
+
+                      {/* Manager Only: Create Epic */}
+                      {(isAdmin || (user?.role === "MANAGER" && team.manager?.id === user?.id)) && (
+                        <button
+                          onClick={() => {
+                            setSelectedTeam(team);
+                            setShowEpicModal(true);
+                            setError(null);
+                          }}
+                          disabled={isCreating}
+                          className="flex-1 min-w-fit px-3 py-2 text-sm font-medium bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Epic
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Team Members Section */}
+            {!isAdmin && (
+            <div className="mt-12 pt-8 border-t border-border">
+              <div className="flex items-center gap-2 mb-6">
+                <Users className="w-5 h-5 text-blue-500" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  Team Members
+                </h2>
+              </div>
+
+              {/* Get all unique members from all teams */}
+              {(() => {
+                const allMembers = visibleTeams.flatMap((team) =>
+                  (team.members || []).filter((member) => member.role === "MEMBER")
+                );
+                const uniqueMembers = Array.from(
+                  new Map(allMembers.map((member) => [member.id, member])).values()
+                );
+
+                if (uniqueMembers.length === 0) {
+                  return (
+                    <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">
+                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                      <p className="text-muted-foreground">No team members assigned yet</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {uniqueMembers.map((member) => {
+                      // Find which team(s) this member belongs to
+                      const memberTeams = visibleTeams.filter((team) =>
+                        team.members?.some((m) => m.id === member.id && m.role === "MEMBER")
+                      );
+
+                      return (
+                        <div
+                          key={member.id}
+                          className="bg-card border border-border rounded-lg p-4 hover:border-blue-500/50 transition-colors"
+                        >
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-sm font-semibold text-blue-500 flex-shrink-0">
+                              {(member.firstName?.[0] ||
+                                member.email[0]).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground">
+                                {member.firstName} {member.lastName}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {member.email}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mb-3 flex gap-2">
+                            <span className="px-2 py-1 text-xs font-medium bg-blue-500/10 text-blue-500 rounded">
+                              {member.role}
+                            </span>
+                            <span className={`px-2 py-1 text-xs font-medium rounded ${
+                              member.onboarded 
+                                ? 'bg-green-500/10 text-green-500' 
+                                : 'bg-yellow-500/10 text-yellow-500'
+                            }`}>
+                              {member.onboarded ? 'Onboarded' : 'Pending'}
+                            </span>
+                          </div>
+
+                          <div className="pt-3 border-t border-border">
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Assigned to {memberTeams.length} team{memberTeams.length !== 1 ? 's' : ''}
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {memberTeams.map((team) => (
+                                <span
+                                  key={team.id}
+                                  className="px-1.5 py-0.5 text-xs bg-primary/10 text-primary rounded"
+                                >
+                                  {team.teamName}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
             )}
           </div>
         </div>
@@ -485,6 +823,53 @@ export default function TeamsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Assign Members Modal */}
+      {selectedMembersTeam && (
+        <AssignMembersModal
+          teamId={selectedMembersTeam.id}
+          isOpen={showMembersModal}
+          onClose={() => {
+            setShowMembersModal(false);
+            setSelectedMembersTeam(null);
+          }}
+          onSuccess={() => {
+            fetchUserAndTeams();
+          }}
+        />
+      )}
+
+      {/* Create Task Status Modal */}
+      {selectedTeam && (
+        <CreateTaskStatusModal
+          teamId={selectedTeam.id}
+          isOpen={showTaskStatusModal}
+          onClose={() => {
+            setShowTaskStatusModal(false);
+            setSelectedTeam(null);
+          }}
+          onSuccess={(message) => {
+            setSuccess(message);
+            setTimeout(() => setSuccess(null), 3000);
+          }}
+        />
+      )}
+
+      {/* Create Epic Modal */}
+      {selectedTeam && (
+        <CreateEpicModal
+          teamId={selectedTeam.id}
+          isOpen={showEpicModal}
+          onClose={() => {
+            setShowEpicModal(false);
+            setSelectedTeam(null);
+          }}
+          onSuccess={(message) => {
+            setSuccess(message);
+            setTimeout(() => setSuccess(null), 3000);
+          }}
+        />
       )}
     </div>
   );
