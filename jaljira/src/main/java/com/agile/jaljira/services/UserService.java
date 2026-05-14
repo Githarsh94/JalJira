@@ -63,6 +63,12 @@ public class UserService {
                     email, user.getFirstName(), user.getLastName());
         }
 
+        // Mark as onboarded on first login if not already onboarded
+        if (!user.isOnboarded()) {
+            user.setOnboarded(true);
+            logger.info("User marked as onboarded on first login: {}", email);
+        }
+
         return userRepository.save(user);
     }
 }

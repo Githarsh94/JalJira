@@ -11,6 +11,7 @@ import {
     Menu,
     X,
     Loader2,
+    Zap,
 } from "lucide-react";
 import { logout, apiFetch, type AuthUser } from "../lib/api";
 
@@ -59,6 +60,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             name: "Teams",
             href: "/dashboard/teams",
             icon: Users,
+            visible: true,
+        },
+        {
+            name: "Epics",
+            href: "/dashboard/epics",
+            icon: Zap,
             visible: true,
         },
     ];
