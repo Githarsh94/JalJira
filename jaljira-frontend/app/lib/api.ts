@@ -149,6 +149,10 @@ export async function createSprint(
   });
 }
 
+export async function getSprintsByOrganization(): Promise<{ id: string; start: string; end: string; templateName?: string; description?: string }[]> {
+  return apiFetch("/api/sprints/org");
+}
+
 // Team Management APIs
 export interface Team {
   id: string;
@@ -159,6 +163,8 @@ export interface Team {
     email: string;
     firstName: string;
     lastName: string;
+    role?: string;
+    onboarded?: boolean;
   } | null;
   members?: Array<{
     id: string;

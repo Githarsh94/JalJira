@@ -6,8 +6,11 @@ import {
   getOrganizationEpics,
   updateEpic,
   apiFetch,
+  getTeamsByOrganization,
+  getSprintsByOrganization,
   type AuthUser,
   type Epic,
+  type Team,
 } from "../../lib/api";
 import {
   Loader2,
@@ -37,6 +40,9 @@ export default function EpicsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("all");
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [sprints, setSprints] = useState<any[]>([]);
+    const [selectedSprintFilter, setSelectedSprintFilter] = useState<string>("all");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null);
   const [savingDetails, setSavingDetails] = useState(false);
@@ -69,6 +75,20 @@ export default function EpicsPage() {
       const epicsData = await getOrganizationEpics();
       setEpics(epicsData);
       setFilteredEpics(epicsData);
+          // fetch teams and sprints for filters
+          try {
+            const teamsData = await getTeamsByOrganization();
+            setTeams(teamsData);
+          } catch (e) {
+            console.warn("Failed to fetch teams", e);
+          }
+
+          try {
+            const sprintsData = await getSprintsByOrganization();
+            setSprints(sprintsData);
+          } catch (e) {
+            console.warn("Failed to fetch sprints", e);
+          }
     } catch (err: any) {
       console.error("Error fetching data:", err);
       setError(err.message || "Failed to load epics");
@@ -156,14 +176,51 @@ export default function EpicsPage() {
   };
 
   // Get unique teams from epics
-  const uniqueTeams = Array.from(
-    new Map(
-      epics.map((epic) => [
-        epic.teamId,
-        { id: epic.teamId, name: epic.teamName },
-      ])
-    ).values()
-  );
+  // Use teams from organization if available, otherwise fallback to teams derived from epics
+  const uniqueTeams = teams && teams.length > 0
+    ? teams.map((t) => ({ id: t.id, name: t.teamName }))
+    : Array.from(
+        new Map(
+          epics.map((epic) => [
+            epic.teamId,
+            { id: epic.teamId, name: epic.teamName },
+          ])
+        ).values()
+      );
+
+  const formatDateRange = (startStr: string, endStr: string) => {
+    try {
+      const start = new Date(startStr);
+      const end = new Date(endStr);
+      return `${start.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} - ${end.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}`;
+    } catch (e) {
+      return "";
+    }
+  };
+
+  const getCurrentSprint = () => {
+    const now = new Date();
+    return sprints.find((s) => new Date(s.start) <= now && new Date(s.end) > now) || null;
+  };
+  useEffect(() => {
+    let filtered = epics;
+    if (selectedTeamFilter !== "all") {
+      filtered = filtered.filter((epic) => epic.teamId === selectedTeamFilter);
+    }
+
+    if (selectedSprintFilter === "current") {
+      const current = getCurrentSprint();
+      if (current) {
+        filtered = filtered.filter((epic) => epic.sprintId === current.id);
+      } else {
+        filtered = [];
+      }
+    } else if (selectedSprintFilter !== "all") {
+      filtered = filtered.filter((epic) => epic.sprintId === selectedSprintFilter);
+    }
+
+    setFilteredEpics(filtered);
+  }, [selectedTeamFilter, selectedSprintFilter, epics, sprints]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -222,9 +279,7 @@ export default function EpicsPage() {
         {uniqueTeams.length > 0 && (
           <div className="mb-6 bg-card border border-border rounded-lg p-4">
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-foreground">
-                Filter by Team:
-              </label>
+              <label className="text-sm font-medium text-foreground">Filter by Team:</label>
               <select
                 value={selectedTeamFilter}
                 onChange={(e) => setSelectedTeamFilter(e.target.value)}
@@ -237,6 +292,26 @@ export default function EpicsPage() {
                   </option>
                 ))}
               </select>
+
+              <label className="text-sm font-medium text-foreground ml-4">Filter by Sprint:</label>
+              <select
+                value={selectedSprintFilter}
+                onChange={(e) => setSelectedSprintFilter(e.target.value)}
+                className="px-3 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All Sprints</option>
+                {getCurrentSprint() && (
+                  <option value="current">
+                    Current ({formatDateRange(getCurrentSprint().start, getCurrentSprint().end)})
+                  </option>
+                )}
+                {sprints.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.templateName ? `${s.templateName} (${formatDateRange(s.start, s.end)})` : formatDateRange(s.start, s.end)}
+                  </option>
+                ))}
+              </select>
+
               <span className="text-xs text-muted-foreground ml-auto">
                 {filteredEpics.length} epic{filteredEpics.length !== 1 ? "s" : ""}
               </span>

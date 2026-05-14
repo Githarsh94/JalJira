@@ -36,6 +36,17 @@ interface UserData {
   organizationId?: string;
 }
 
+interface OrgUserRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  teamId: string;
+  teamName: string;
+  onboarded: boolean;
+}
+
 export default function TeamsPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
@@ -50,6 +61,10 @@ export default function TeamsPage() {
   const [showEpicModal, setShowEpicModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [adminNameFilter, setAdminNameFilter] = useState("");
+  const [adminEmailFilter, setAdminEmailFilter] = useState("");
+  const [adminRoleFilter, setAdminRoleFilter] = useState("all");
+  const [adminTeamFilter, setAdminTeamFilter] = useState("all");
 
   const [formData, setFormData] = useState({
     teamName: "",
@@ -180,6 +195,64 @@ export default function TeamsPage() {
   };
 
   const isAdmin = user?.role === "ADMIN";
+  const visibleTeams = isAdmin
+    ? teams
+    : teams.filter((team) => {
+        const managerMatches = team.manager?.id === user?.id;
+        const memberMatches = team.members?.some((member) => member.id === user?.id);
+        return managerMatches || memberMatches;
+      });
+
+  const adminUsers: OrgUserRow[] = Array.from(
+    new Map(
+      teams.flatMap((team) => {
+        const rows: OrgUserRow[] = [];
+
+        if (team.manager) {
+          rows.push({
+            id: team.manager.id,
+            firstName: team.manager.firstName || "",
+            lastName: team.manager.lastName || "",
+            email: team.manager.email,
+            role: team.manager.role || "MANAGER",
+            teamId: team.id,
+            teamName: team.teamName,
+            onboarded: team.manager.onboarded ?? true,
+          });
+        }
+
+        (team.members || [])
+          .filter((member) => member.role === "MEMBER")
+          .forEach((member) => {
+            rows.push({
+              id: member.id,
+              firstName: member.firstName || "",
+              lastName: member.lastName || "",
+              email: member.email,
+              role: member.role,
+              teamId: team.id,
+              teamName: team.teamName,
+              onboarded: member.onboarded,
+            });
+          });
+
+        return rows.map((row) => [row.id, row] as const);
+      })
+    ).values()
+  );
+
+  const filteredAdminUsers = adminUsers.filter((row) => {
+    const fullName = `${row.firstName} ${row.lastName}`.trim().toLowerCase();
+    const nameMatches =
+      adminNameFilter.trim() === "" ||
+      fullName.includes(adminNameFilter.trim().toLowerCase());
+    const emailMatches =
+      adminEmailFilter.trim() === "" ||
+      row.email.toLowerCase().includes(adminEmailFilter.trim().toLowerCase());
+    const roleMatches = adminRoleFilter === "all" || row.role === adminRoleFilter;
+    const teamMatches = adminTeamFilter === "all" || row.teamId === adminTeamFilter;
+    return nameMatches && emailMatches && roleMatches && teamMatches;
+  });
 
   if (loading) {
     return (
@@ -288,7 +361,7 @@ export default function TeamsPage() {
               <div className="flex items-center gap-2 mb-4">
                 <Target className="w-5 h-5 text-primary" />
                 <h2 className="text-lg font-semibold text-foreground">
-                  Active Teams Roster
+                  {isAdmin ? "Organization Users" : "Active Teams Roster"}
                 </h2>
               </div>
 
@@ -308,10 +381,123 @@ export default function TeamsPage() {
               )}
             </div>
 
-            {teams.length === 0 ? (
+            {isAdmin ? (
+              <>
+                <div className="mb-6 bg-card border border-border rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Name
+                      </label>
+                      <input
+                        type="text"
+                        value={adminNameFilter}
+                        onChange={(e) => setAdminNameFilter(e.target.value)}
+                        placeholder="Search by name or email"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Email
+                      </label>
+                      <input
+                        type="text"
+                        value={adminEmailFilter}
+                        onChange={(e) => setAdminEmailFilter(e.target.value)}
+                        placeholder="Search by email"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Role
+                      </label>
+                      <select
+                        value={adminRoleFilter}
+                        onChange={(e) => setAdminRoleFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="all">All Roles</option>
+                        <option value="MANAGER">MANAGER</option>
+                        <option value="MEMBER">MEMBER</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Filter by Team Name
+                      </label>
+                      <select
+                        value={adminTeamFilter}
+                        onChange={(e) => setAdminTeamFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="all">All Teams</option>
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.teamName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {filteredAdminUsers.length} user{filteredAdminUsers.length !== 1 ? "s" : ""}
+                  </div>
+                </div>
+
+                {filteredAdminUsers.length === 0 ? (
+                  <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">
+                    <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <p className="text-muted-foreground">No users match the current filters</p>
+                  </div>
+                ) : (
+                  <div className="bg-card border border-border rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-background/60 border-b border-border">
+                          <tr>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Name</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Email</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Role</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Team</th>
+                            <th className="text-left font-medium text-muted-foreground px-4 py-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredAdminUsers.map((row) => (
+                            <tr key={`${row.id}-${row.teamId}`} className="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-foreground">
+                                  {row.firstName} {row.lastName}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">{row.email}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-1 text-xs font-medium rounded bg-primary/10 text-primary">
+                                  {row.role}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-foreground">{row.teamName}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                  row.onboarded ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"
+                                }`}>
+                                  {row.onboarded ? "Onboarded" : "Pending"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : visibleTeams.length === 0 ? (
               <div className="bg-card border-2 border-dashed border-border rounded-lg p-12 text-center">
                 <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">No teams created yet</p>
+                <p className="text-muted-foreground">No teams available</p>
                 {isAdmin && (
                   <p className="text-sm text-muted-foreground mt-1">
                     Create your first team using the form on the left
@@ -320,7 +506,7 @@ export default function TeamsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {teams.map((team) => (
+                {visibleTeams.map((team) => (
                   <div
                     key={team.id}
                     className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors"
@@ -460,6 +646,7 @@ export default function TeamsPage() {
             )}
 
             {/* Team Members Section */}
+            {!isAdmin && (
             <div className="mt-12 pt-8 border-t border-border">
               <div className="flex items-center gap-2 mb-6">
                 <Users className="w-5 h-5 text-blue-500" />
@@ -470,7 +657,9 @@ export default function TeamsPage() {
 
               {/* Get all unique members from all teams */}
               {(() => {
-                const allMembers = teams.flatMap((team) => team.members || []);
+                const allMembers = visibleTeams.flatMap((team) =>
+                  (team.members || []).filter((member) => member.role === "MEMBER")
+                );
                 const uniqueMembers = Array.from(
                   new Map(allMembers.map((member) => [member.id, member])).values()
                 );
@@ -488,8 +677,8 @@ export default function TeamsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {uniqueMembers.map((member) => {
                       // Find which team(s) this member belongs to
-                      const memberTeams = teams.filter((team) =>
-                        team.members?.some((m) => m.id === member.id)
+                      const memberTeams = visibleTeams.filter((team) =>
+                        team.members?.some((m) => m.id === member.id && m.role === "MEMBER")
                       );
 
                       return (
@@ -547,6 +736,7 @@ export default function TeamsPage() {
                 );
               })()}
             </div>
+            )}
           </div>
         </div>
       </main>

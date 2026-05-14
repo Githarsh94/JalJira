@@ -343,7 +343,9 @@ public class TeamController {
           "id", manager.getId().toString(),
           "email", manager.getEmail(),
           "firstName", manager.getFirstName() != null ? manager.getFirstName() : "",
-          "lastName", manager.getLastName() != null ? manager.getLastName() : ""));
+          "lastName", manager.getLastName() != null ? manager.getLastName() : "",
+          "role", manager.getRole() != null ? manager.getRole().name() : "MANAGER",
+          "onboarded", manager.isOnboarded()));
     } else {
       result.put("manager", null);
     }
